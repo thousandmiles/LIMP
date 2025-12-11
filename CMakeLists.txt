@@ -1,0 +1,132 @@
+cmake_minimum_required(VERSION 3.15)
+
+project(LIMP
+    VERSION 0.1.0
+    DESCRIPTION "Lightweight Industrial Messaging Protocol"
+    LANGUAGES CXX
+)
+
+# C++17 standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Export compile commands for IDE support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Build options
+option(LIMP_BUILD_EXAMPLES "Build example applications" ON)
+option(LIMP_BUILD_TESTS "Build unit tests" ON)
+option(LIMP_BUILD_SHARED "Build shared library" OFF)
+
+# Platform-specific settings
+if(WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0601)  # Windows 7+
+endif()
+
+# Library type
+if(LIMP_BUILD_SHARED)
+    set(LIMP_LIBRARY_TYPE SHARED)
+else()
+    set(LIMP_LIBRARY_TYPE STATIC)
+endif()
+
+# Source files
+set(LIMP_SOURCES
+    src/frame.cpp
+    src/message.cpp
+    src/transport.cpp
+    src/utils.cpp
+    src/crc.cpp
+)
+
+set(LIMP_HEADERS
+    include/limp/types.hpp
+    include/limp/frame.hpp
+    include/limp/message.hpp
+    include/limp/transport.hpp
+    include/limp/utils.hpp
+    include/limp/crc.hpp
+    include/limp/limp.hpp
+)
+
+# Create library
+add_library(limp ${LIMP_LIBRARY_TYPE} ${LIMP_SOURCES} ${LIMP_HEADERS})
+
+# Set library properties
+set_target_properties(limp PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    PUBLIC_HEADER "${LIMP_HEADERS}"
+)
+
+# Include directories
+target_include_directories(limp
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# Compiler warnings
+if(MSVC)
+    target_compile_options(limp PRIVATE /W4 /WX)
+else()
+    target_compile_options(limp PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
+# Platform-specific libraries
+if(WIN32)
+    target_link_libraries(limp PRIVATE ws2_32)
+elseif(UNIX)
+    target_link_libraries(limp PRIVATE pthread)
+endif()
+
+# Examples
+if(LIMP_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+# Tests
+if(LIMP_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# Installation
+include(GNUInstallDirs)
+
+install(TARGETS limp
+    EXPORT LIMPTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/limp
+)
+
+install(EXPORT LIMPTargets
+    FILE LIMPTargets.cmake
+    NAMESPACE LIMP::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
+)
+
+# Generate config file
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LIMPConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
+)
