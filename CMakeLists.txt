@@ -6,11 +6,6 @@ project(LIMP
     LANGUAGES CXX
 )
 
-# Conan integration
-if(EXISTS ${CMAKE_BINARY_DIR}/conan_toolchain.cmake)
-    include(${CMAKE_BINARY_DIR}/conan_toolchain.cmake)
-endif()
-
 # C++17 standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
