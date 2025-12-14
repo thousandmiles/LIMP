@@ -6,12 +6,12 @@
 namespace limp
 {
 
-    // CRC16-IBM polynomial 0x8005
-    constexpr uint16_t CRC16_POLYNOMIAL = 0x8005;
+    constexpr uint16_t CRC16_POLYNOMIAL = 0xA001;
+    constexpr uint16_t CRC16_INITIAL = 0xFFFF;
 
     /**
-     * Calculate CRC16-IBM checksum
-     * Polynomial: 0x8005, Initial: 0x0000, no reflection
+     * Calculate CRC16-MODBUS checksum
+     * Polynomial: 0xA001 (reflected), Initial: 0xFFFF, LSB-first
      *
      * @param data Pointer to data buffer
      * @param length Length of data in bytes

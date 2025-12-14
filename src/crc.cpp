@@ -5,21 +5,21 @@ namespace limp
 
     uint16_t calculateCRC16(const uint8_t *data, size_t length)
     {
-        uint16_t crc = 0x0000;
+        uint16_t crc = CRC16_INITIAL; // Start with 0xFFFF for Modbus
 
         for (size_t i = 0; i < length; ++i)
         {
-            crc ^= static_cast<uint16_t>(data[i]) << 8;
+            crc ^= static_cast<uint16_t>(data[i]); // XOR with LSB (Modbus style)
 
             for (int j = 0; j < 8; ++j)
             {
-                if (crc & 0x8000)
+                if (crc & 0x0001) // Check LSB (reflected)
                 {
-                    crc = (crc << 1) ^ CRC16_POLYNOMIAL;
+                    crc = (crc >> 1) ^ CRC16_POLYNOMIAL; // Shift right and XOR , 0xA001;
                 }
                 else
                 {
-                    crc <<= 1;
+                    crc >>= 1; // Just shift right
                 }
             }
         }
