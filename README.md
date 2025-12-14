@@ -2,63 +2,51 @@
 
 Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC communication).
 
-## Features
-
-- **Modern C++17** - Type-safe, zero external dependencies (core)
-- **Compact Binary Protocol** - 16-byte header + payload, CRC16-MODBUS validation
-- **Builder Pattern API** - Fluent interface for message construction
-- **Optional ZeroMQ Transport** - High-performance REQ-REP and PUB-SUB patterns
-- **Cross-platform** - Linux, Windows, macOS
+**Features:** Compact binary protocol (16-byte header + payload) | Builder pattern API | ZeroMQ transport | CRC16-MODBUS | Cross-platform
 
 ## Quick Start
 
-### Build
+**Download Pre-built Package:**
 
 ```bash
-# Simple build (no dependencies)
-./build.sh
-
-# With ZeroMQ support
-./build.sh --with-zmq
-
-# Or using CMake
-mkdir build && cd build
-cmake -DLIMP_BUILD_ZMQ=ON ..
-make
+# Download from GitHub Releases
+tar xzf limp-v0.1.0-linux-x64.tar.gz
+# Package contains: include/limp/*.hpp + lib/liblimp.a (with ZeroMQ)
 ```
 
-### ZeroMQ Dependencies (optional)
+**Or Build from Source:**
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libzmq3-dev
-git clone https://github.com/zeromq/cppzmq.git
-cd cppzmq && mkdir build && cd build
-cmake .. && sudo make install
+pip install conan
+conan profile detect
+conan install . --output-folder=build --build=missing
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake
+cmake --build .
+# Creates: liblimp.a
 ```
 
 ## Usage
+
+**Core Protocol:**
 
 ```cpp
 #include <limp/limp.hpp>
 using namespace limp;
 
-// Build request
+// Build and serialize request
 auto request = MessageBuilder::request(0x10, 0x30, 0x3000, 7, 1)
-    .setPayload(123.45f)
-    .build();
-
+    .setPayload(123.45f).build();
 std::vector<uint8_t> buffer;
-serializeFrame(request, buffer);  // Send buffer...
+serializeFrame(request, buffer);
 
-// Parse response
+// Deserialize and parse response
 Frame response;
 deserializeFrame(buffer, response);
-MessageParser parser(response);
-auto value = parser.getFloat32();
+auto value = MessageParser(response).getFloat32();
 ```
 
-**ZeroMQ (if enabled):**
+**ZeroMQ Transport:**
 
 ```cpp
 #include <limp/zmq/zmq.hpp>
@@ -78,66 +66,45 @@ client.connect("tcp://127.0.0.1:5555");
 client.send(MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1).build());
 Frame resp;
 client.receive(resp);
-
-// Pub-Sub
-ZMQPublisher pub;
-pub.bind("tcp://0.0.0.0:5556");
-pub.publish("topic", data, size);
-
-ZMQSubscriber sub;
-sub.connect("tcp://127.0.0.1:5556");
-sub.subscribe("topic");
-sub.receive(frame);
 ```
-
-## Protocol Overview
-
-16-byte header + payload (0-65KB) | CRC16-MODBUS | Big-endian | Class/Instance/Attribute addressing
-
-**Types:** REQUEST, RESPONSE, EVENT, ERROR, SUBSCRIBE, UNSUBSCRIBE, ACK
-
-## API
-
-**Core:** `MessageBuilder`, `MessageParser`, `Frame`, `serializeFrame()`, `deserializeFrame()`  
-**ZMQ:** `ZMQClient`, `ZMQServer`, `ZMQPublisher`, `ZMQSubscriber`, `ZMQConfig`  
-**Enums:** `NodeID`, `ClassID`, `MsgType`, `ErrorCode`
 
 ## Integration
 
-**Install ZeroMQ (optional):**
+**Using Pre-built Package:**
+
+Create `myapp.cpp`:
+
+```cpp
+#include <limp/limp.hpp>
+using namespace limp;
+
+int main() {
+    auto msg = MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1)
+        .setPayload(42).build();
+    return 0;
+}
+```
+
+**Option A - Direct compilation:**
 
 ```bash
-sudo apt-get install libzmq3-dev
-git clone https://github.com/zeromq/cppzmq.git && cd cppzmq
-mkdir build && cd build && cmake .. && sudo make install
+g++ -std=c++17 -I/path/to/limp/include myapp.cpp /path/to/limp/lib/liblimp.a -o myapp
 ```
 
-**CMake FetchContent:**
+**Option B - CMake:**
 
 ```cmake
-include(FetchContent)
-FetchContent_Declare(limp GIT_REPOSITORY https://github.com/yourname/LIMP.git GIT_TAG main)
-FetchContent_MakeAvailable(limp)
-target_link_libraries(your_app PRIVATE limp)
-# set(LIMP_BUILD_ZMQ ON) for ZeroMQ support
+add_executable(myapp myapp.cpp)
+target_include_directories(myapp PRIVATE /path/to/limp/include)
+target_link_libraries(myapp /path/to/limp/lib/liblimp.a)
 ```
 
-**Submodule:**
+**Using Built from Source:**
 
-```bash
-git submodule add https://github.com/yourname/LIMP.git third_party/limp
-```
+If you built from source, use the same approach but point to your build directory:
 
-```cmake
-add_subdirectory(third_party/limp)
-target_link_libraries(your_app PRIVATE limp)
-```
-
-## Notes
-
-Not thread-safe. ZeroMQ sockets: one per thread. Requires C++17 (GCC 7+, Clang 6+, MSVC 2017+).
-
-**Implementation Protection:** Library uses header+source separation. Users receive only public API headers (.hpp) with comprehensive docstrings and compiled binaries - implementation details (.cpp) remain private.
+- Headers: `LIMP/include/`
+- Library: `LIMP/build/liblimp.a`
 
 ## License
 
