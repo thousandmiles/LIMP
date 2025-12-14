@@ -18,6 +18,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(LIMP_BUILD_EXAMPLES "Build example applications" ON)
 option(LIMP_BUILD_TESTS "Build unit tests" ON)
 option(LIMP_BUILD_SHARED "Build shared library" OFF)
+option(LIMP_BUILD_ZMQ "Build with ZeroMQ transport support" OFF)
 
 # Platform-specific settings
 if(WIN32)
@@ -50,6 +51,32 @@ set(LIMP_HEADERS
     include/limp/limp.hpp
 )
 
+# ZeroMQ support (optional)
+if(LIMP_BUILD_ZMQ)
+    find_package(cppzmq REQUIRED)
+    
+    # Add ZMQ sources and headers
+    list(APPEND LIMP_SOURCES 
+        src/zmq/zmq_transport_base.cpp
+        src/zmq/zmq_client.cpp
+        src/zmq/zmq_server.cpp
+        src/zmq/zmq_publisher.cpp
+        src/zmq/zmq_subscriber.cpp
+    )
+    list(APPEND LIMP_HEADERS 
+        include/limp/zmq/zmq_config.hpp
+        include/limp/zmq/zmq_transport_base.hpp
+        include/limp/zmq/zmq_client.hpp
+        include/limp/zmq/zmq_server.hpp
+        include/limp/zmq/zmq_publisher.hpp
+        include/limp/zmq/zmq_subscriber.hpp
+        include/limp/zmq/zmq.hpp
+    )
+    
+    # Define ZMQ enabled macro
+    add_definitions(-DLIMP_HAS_ZMQ)
+endif()
+
 # Create library
 add_library(limp ${LIMP_LIBRARY_TYPE} ${LIMP_SOURCES} ${LIMP_HEADERS})
 
@@ -81,6 +108,11 @@ if(WIN32)
     target_link_libraries(limp PRIVATE ws2_32)
 elseif(UNIX)
     target_link_libraries(limp PRIVATE pthread)
+endif()
+
+# Link ZeroMQ if enabled
+if(LIMP_BUILD_ZMQ)
+    target_link_libraries(limp PUBLIC cppzmq)
 endif()
 
 # Examples
