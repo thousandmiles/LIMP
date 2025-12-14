@@ -2,7 +2,7 @@
 
 Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC communication).
 
-**Features:** Compact binary protocol (16-byte header + payload) | Builder pattern API | ZeroMQ transport | CRC16-MODBUS | Cross-platform
+**Features:** Compact binary protocol (14-byte header + payload) | Builder pattern API | ZeroMQ transport | CRC16-MODBUS | Cross-platform
 
 ## Linux Usage
 
