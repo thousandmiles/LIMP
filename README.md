@@ -23,8 +23,8 @@ pip install conan
 conan profile detect
 
 # Build library
-conan install . --output-folder=build --build=missing -s build_type=Release
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake
+conan install . --output-folder=. --build=missing -s build_type=Release
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 # Outputs: build/liblimp.a
 ```
@@ -34,7 +34,7 @@ cmake --build build -j
 ```bash
 # Add flags to CMake command
 cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake \
-      -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
+      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
 cmake --build build -j
 
 # Run tests
