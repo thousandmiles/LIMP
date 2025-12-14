@@ -75,11 +75,10 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-linux-x64"
           mkdir -p ${PKG}/{lib,include}
-          cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build . -j$(nproc)
-          cp liblimp.a ../${PKG}/lib/
-          cd .. && cp -r include/limp ${PKG}/include/
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build build -j$(nproc)
+          cp build/liblimp.a ${PKG}/lib/
+          cp -r include/limp ${PKG}/include/
           echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
           cd dist && tar czf limp-${{ github.ref_name }}-linux-x64.tar.gz limp-${{ github.ref_name }}-linux-x64
 
@@ -121,11 +120,10 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-x64"
           mkdir -p ${PKG}/{lib,include}
-          cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build . -j$(sysctl -n hw.ncpu)
-          cp liblimp.a ../${PKG}/lib/
-          cd .. && cp -r include/limp ${PKG}/include/
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build build -j$(sysctl -n hw.ncpu)
+          cp build/liblimp.a ${PKG}/lib/
+          cp -r include/limp ${PKG}/include/
           echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
           cd dist && tar czf limp-${{ github.ref_name }}-darwin-x64.tar.gz limp-${{ github.ref_name }}-darwin-x64
 
@@ -167,11 +165,10 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-arm64"
           mkdir -p ${PKG}/{lib,include}
-          cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build . -j$(sysctl -n hw.ncpu)
-          cp liblimp.a ../${PKG}/lib/
-          cd .. && cp -r include/limp ${PKG}/include/
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build build -j$(sysctl -n hw.ncpu)
+          cp build/liblimp.a ${PKG}/lib/
+          cp -r include/limp ${PKG}/include/
           echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
           cd dist && tar czf limp-${{ github.ref_name }}-darwin-arm64.tar.gz limp-${{ github.ref_name }}-darwin-arm64
 
