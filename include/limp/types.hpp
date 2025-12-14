@@ -22,40 +22,6 @@ namespace limp
     constexpr uint16_t CRC_SIZE = 2;
 
     /**
-     * @brief Predefined node identifiers
-     *
-     * Standard node IDs for common industrial automation components.
-     * Custom nodes should use ranges: 0x7000-0x7FFF (vendor) or 0x8000-0xFFFE (user).
-     */
-    enum class NodeID : uint16_t
-    {
-        HMI = 0x0010,      ///< Human-Machine Interface
-        Server = 0x0020,   ///< Server/Gateway node
-        PLC = 0x0030,      ///< Programmable Logic Controller
-        Alarm = 0x0040,    ///< Alarm management system
-        Logger = 0x0050,   ///< Data logger
-        Broadcast = 0xFFFF ///< Broadcast to all nodes
-    };
-
-    /** @brief Start of protocol-reserved node ID range */
-    constexpr uint16_t NODE_PROTOCOL_BASE = 0x0001;
-
-    /** @brief End of protocol-reserved node ID range */
-    constexpr uint16_t NODE_PROTOCOL_END = 0x6FFF;
-
-    /** @brief Start of vendor-specific node ID range */
-    constexpr uint16_t NODE_VENDOR_BASE = 0x7000;
-
-    /** @brief End of vendor-specific node ID range */
-    constexpr uint16_t NODE_VENDOR_END = 0x7FFF;
-
-    /** @brief Start of user-defined node ID range */
-    constexpr uint16_t NODE_USER_BASE = 0x8000;
-
-    /** @brief End of user-defined node ID range */
-    constexpr uint16_t NODE_USER_END = 0xFFFE;
-
-    /**
      * @brief Message type identifiers
      *
      * Defines the purpose and semantics of a LIMP message.
@@ -70,58 +36,6 @@ namespace limp
         UNSUBSCRIBE = 0x06, ///< Unsubscribe from data changes
         ACK = 0x07          ///< Acknowledgment
     };
-
-    /**
-     * @brief Object class identifiers
-     *
-     * Defines standard object classes for industrial automation.
-     * Similar to EtherNet/IP CIP object model.
-     */
-    enum class ClassID : uint16_t
-    {
-        System = 0x1000,      ///< System-level objects
-        IO = 0x2000,          ///< I/O point objects
-        Tag = 0x3000,         ///< Data tag objects
-        Motion = 0x4000,      ///< Motion control objects
-        AlarmObject = 0x5000, ///< Alarm objects
-        LoggerObject = 0x6000 ///< Logger objects
-    };
-
-    // Class ID ranges
-    constexpr uint16_t CLASS_PROTOCOL_BASE = 0x1000;
-    constexpr uint16_t CLASS_PROTOCOL_END = 0x6FFF;
-    constexpr uint16_t CLASS_VENDOR_BASE = 0x7000;
-    constexpr uint16_t CLASS_VENDOR_END = 0x7FFF;
-    constexpr uint16_t CLASS_USER_BASE = 0x8000;
-    constexpr uint16_t CLASS_USER_END = 0xFFFF;
-
-    // Instance ID range
-    constexpr uint16_t INSTANCE_CORE_MAX = 0x7FFF;
-    constexpr uint16_t INSTANCE_USER_BASE = 0x8000;
-
-    // Attribute IDs for Tag class
-    namespace TagAttr
-    {
-        constexpr uint16_t Value = 0x0001;
-        constexpr uint16_t Quality = 0x0002;
-        constexpr uint16_t Timestamp = 0x0003;
-    }
-
-    // Attribute IDs for Motion class
-    namespace MotionAttr
-    {
-        constexpr uint16_t Position = 0x0001;
-        constexpr uint16_t Speed = 0x0002;
-        constexpr uint16_t Torque = 0x0003;
-    }
-
-    // Attribute IDs for AlarmObject class
-    namespace AlarmAttr
-    {
-        constexpr uint16_t Active = 0x0001;
-        constexpr uint16_t Severity = 0x0002;
-        constexpr uint16_t Message = 0x0003;
-    }
 
     /**
      * @brief Error code identifiers
