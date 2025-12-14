@@ -10,7 +10,7 @@ Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC commun
 
 ```bash
 # From GitHub Releases: https://github.com/thousandmiles/LIMP/releases/
-wget https://github.com/forrestlinfeng/LIMP/releases/download/v0.1.0/limp-v0.1.0-linux-x64.tar.gz
+wget https://github.com/thousandmiles/LIMP/releases/download/v0.1.0/limp-v0.1.0-linux-x64.tar.gz
 tar xzf limp-v0.1.0-linux-x64.tar.gz
 # Extracts to: include/limp/*.hpp + lib/liblimp.a
 ```
