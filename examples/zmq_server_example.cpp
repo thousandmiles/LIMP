@@ -91,9 +91,9 @@ int main()
 
             // Send error response
             auto errorBuilder = MessageBuilder::error(
-                static_cast<uint16_t>(NodeID::PLC),
-                static_cast<uint16_t>(NodeID::HMI),
-                static_cast<uint16_t>(ClassID::Tag),
+                0x0030,
+                0x0010,
+                0x3000,
                 0, 0,
                 ErrorCode::BadPayload);
             Frame errorFrame = errorBuilder.build();

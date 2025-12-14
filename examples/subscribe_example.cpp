@@ -116,11 +116,11 @@ int main()
     std::cout << "-----------------------------------\n";
 
     auto subscribe1 = MessageBuilder::subscribe(
-                          static_cast<uint16_t>(NodeID::HMI),
-                          static_cast<uint16_t>(NodeID::PLC),
-                          static_cast<uint16_t>(ClassID::Tag),
+                          0x0010,
+                          0x0030,
+                          0x3000,
                           7,
-                          TagAttr::Value)
+                          0x0001)
                           .build();
 
     subManager.addSubscription(subscribe1);
@@ -131,11 +131,11 @@ int main()
     std::cout << "-------------------------------------\n";
 
     auto subscribe2 = MessageBuilder::subscribe(
-                          static_cast<uint16_t>(NodeID::Server),
-                          static_cast<uint16_t>(NodeID::PLC),
-                          static_cast<uint16_t>(ClassID::Tag),
+                          0x0020,
+                          0x0030,
+                          0x3000,
                           7,
-                          TagAttr::Value)
+                          0x0001)
                           .build();
 
     subManager.addSubscription(subscribe2);
@@ -146,11 +146,11 @@ int main()
     std::cout << "----------------------------------\n";
 
     auto subscribe3 = MessageBuilder::subscribe(
-                          static_cast<uint16_t>(NodeID::HMI),
-                          static_cast<uint16_t>(NodeID::PLC),
-                          static_cast<uint16_t>(ClassID::Tag),
+                          0x0010,
+                          0x0030,
+                          0x3000,
                           8,
-                          TagAttr::Value)
+                          0x0001)
                           .build();
 
     subManager.addSubscription(subscribe3);
@@ -163,18 +163,18 @@ int main()
     tagSystem.setValue(7, 123.45f);
 
     auto subscribers = subManager.getSubscribers(
-        static_cast<uint16_t>(ClassID::Tag), 7, TagAttr::Value);
+        0x3000, 7, 0x0001);
 
     std::cout << "Sending EVENT to " << subscribers.size() << " subscriber(s):\n";
 
     for (auto subscriberNode : subscribers)
     {
         auto event = MessageBuilder::event(
-                         static_cast<uint16_t>(NodeID::PLC),
+                         0x0030,
                          subscriberNode,
-                         static_cast<uint16_t>(ClassID::Tag),
+                         0x3000,
                          7,
-                         TagAttr::Value)
+                         0x0001)
                          .setPayload(123.45f)
                          .enableCRC()
                          .build();
@@ -193,11 +193,11 @@ int main()
     std::cout << "--------------------------------------\n";
 
     auto unsubscribe = MessageBuilder::unsubscribe(
-                           static_cast<uint16_t>(NodeID::HMI),
-                           static_cast<uint16_t>(NodeID::PLC),
-                           static_cast<uint16_t>(ClassID::Tag),
+                           0x0010,
+                           0x0030,
+                           0x3000,
                            7,
-                           TagAttr::Value)
+                           0x0001)
                            .build();
 
     subManager.removeSubscription(unsubscribe);
@@ -210,18 +210,18 @@ int main()
     tagSystem.setValue(7, 200.0f);
 
     subscribers = subManager.getSubscribers(
-        static_cast<uint16_t>(ClassID::Tag), 7, TagAttr::Value);
+        0x3000, 7, 0x0001);
 
     std::cout << "Sending EVENT to " << subscribers.size() << " subscriber(s):\n";
 
     for (auto subscriberNode : subscribers)
     {
         auto event = MessageBuilder::event(
-                         static_cast<uint16_t>(NodeID::PLC),
+                         0x0030,
                          subscriberNode,
-                         static_cast<uint16_t>(ClassID::Tag),
+                         0x3000,
                          7,
-                         TagAttr::Value)
+                         0x0001)
                          .setPayload(200.0f)
                          .enableCRC()
                          .build();

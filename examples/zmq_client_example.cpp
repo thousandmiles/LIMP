@@ -52,9 +52,9 @@ int main()
 
         // Build request message using the actual API
         auto builder = MessageBuilder::request(
-            static_cast<uint16_t>(NodeID::HMI),
-            static_cast<uint16_t>(NodeID::PLC),
-            static_cast<uint16_t>(ClassID::Tag),
+            0x0010,
+            0x0030,
+            0x3000,
             100, // Instance ID
             i    // Attribute ID
         );

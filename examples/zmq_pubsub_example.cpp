@@ -58,9 +58,9 @@ void publisherThread()
         {
             // Temperature event
             auto tempBuilder = MessageBuilder::event(
-                static_cast<uint16_t>(NodeID::HMI),
-                static_cast<uint16_t>(NodeID::PLC),
-                static_cast<uint16_t>(ClassID::Tag),
+                0x0010,
+                0x0030,
+                0x3000,
                 1, // Instance ID for temperature
                 1  // Attribute ID
             );
@@ -78,9 +78,9 @@ void publisherThread()
         {
             // Pressure event
             auto pressureBuilder = MessageBuilder::event(
-                static_cast<uint16_t>(NodeID::HMI),
-                static_cast<uint16_t>(NodeID::PLC),
-                static_cast<uint16_t>(ClassID::Tag),
+                0x0010,
+                0x0030,
+                0x3000,
                 2, // Instance ID for pressure
                 1  // Attribute ID
             );

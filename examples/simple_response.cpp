@@ -13,11 +13,11 @@ int main()
     // 1. Tag Quality Response (UINT8)
     std::cout << "1. Tag Quality Response\n";
     auto qualityResp = MessageBuilder::response(
-                           static_cast<uint16_t>(NodeID::PLC),
-                           static_cast<uint16_t>(NodeID::HMI),
-                           static_cast<uint16_t>(ClassID::Tag),
+                           0x0030,
+                           0x0010,
+                           0x3000,
                            10,
-                           TagAttr::Quality)
+                           0x0002)
                            .setPayload(static_cast<uint8_t>(Quality::Good))
                            .enableCRC();
 
@@ -36,11 +36,11 @@ int main()
                        .count();
 
     auto timestampResp = MessageBuilder::response(
-                             static_cast<uint16_t>(NodeID::PLC),
-                             static_cast<uint16_t>(NodeID::HMI),
-                             static_cast<uint16_t>(ClassID::Tag),
+                             0x0030,
+                             0x0010,
+                             0x3000,
                              10,
-                             TagAttr::Timestamp)
+                             0x0003)
                              .setPayload(static_cast<uint64_t>(epochMs))
                              .enableCRC();
 
@@ -54,11 +54,11 @@ int main()
     // 3. Motion Position Response (FLOAT64)
     std::cout << "3. Motion Position Response\n";
     auto positionResp = MessageBuilder::response(
-                            static_cast<uint16_t>(NodeID::PLC),
-                            static_cast<uint16_t>(NodeID::HMI),
-                            static_cast<uint16_t>(ClassID::Motion),
+                            0x0030,
+                            0x0010,
+                            0x4000,
                             0, // Motor0
-                            MotionAttr::Position)
+                            0x0001)
                             .setPayload(3.14159265359)
                             .enableCRC();
 
@@ -72,11 +72,11 @@ int main()
     // 4. Alarm Message Response (STRING)
     std::cout << "4. Alarm Message Response\n";
     auto alarmResp = MessageBuilder::response(
-                         static_cast<uint16_t>(NodeID::Alarm),
-                         static_cast<uint16_t>(NodeID::HMI),
-                         static_cast<uint16_t>(ClassID::AlarmObject),
+                         0x0040,
+                         0x0010,
+                         0x5000,
                          5,
-                         AlarmAttr::Message)
+                         0x0003)
                          .setPayload("Temperature exceeded threshold")
                          .enableCRC();
 
@@ -92,9 +92,9 @@ int main()
     std::vector<uint8_t> binaryData = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
 
     auto binaryResp = MessageBuilder::response(
-                          static_cast<uint16_t>(NodeID::Server),
-                          static_cast<uint16_t>(NodeID::HMI),
-                          static_cast<uint16_t>(ClassID::System),
+                          0x0020,
+                          0x0010,
+                          0x1000,
                           0,
                           0x0010 // Custom attribute
                           )
@@ -116,11 +116,11 @@ int main()
     // 6. EVENT message (value change notification)
     std::cout << "6. EVENT - Tag Value Changed\n";
     auto eventMsg = MessageBuilder::event(
-                        static_cast<uint16_t>(NodeID::PLC),
-                        static_cast<uint16_t>(NodeID::HMI),
-                        static_cast<uint16_t>(ClassID::Tag),
+                        0x0030,
+                        0x0010,
+                        0x3000,
                         7,
-                        TagAttr::Value)
+                        0x0001)
                         .setPayload(456.78f)
                         .enableCRC();
 

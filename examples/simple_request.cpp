@@ -43,11 +43,11 @@ int main()
     std::cout << "----------------------------------------\n";
 
     auto request = MessageBuilder::request(
-        static_cast<uint16_t>(NodeID::HMI),  // Source: HMI
-        static_cast<uint16_t>(NodeID::PLC),  // Destination: PLC
-        static_cast<uint16_t>(ClassID::Tag), // Class: Tag
-        7,                                   // Instance: Tag7
-        TagAttr::Value                       // Attribute: Value
+        0x0010, // Source: HMI
+        0x0030, // Destination: PLC
+        0x3000, // Class: Tag
+        7,      // Instance: Tag7
+        0x0001  // Attribute: Value
     );
 
     Frame frame1 = request.build();
@@ -84,11 +84,11 @@ int main()
     std::cout << "------------------------------------------------------\n";
 
     auto response = MessageBuilder::response(
-                        static_cast<uint16_t>(NodeID::PLC),  // Source: PLC
-                        static_cast<uint16_t>(NodeID::HMI),  // Destination: HMI
-                        static_cast<uint16_t>(ClassID::Tag), // Class: Tag
-                        7,                                   // Instance: Tag7
-                        TagAttr::Value                       // Attribute: Value
+                        0x0030, // Source: PLC
+                        0x0010, // Destination: HMI
+                        0x3000, // Class: Tag
+                        7,      // Instance: Tag7
+                        0x0001  // Attribute: Value
                         )
                         .setPayload(123.45f)
                         .enableCRC(true);
@@ -115,12 +115,12 @@ int main()
     std::cout << "------------------------------------\n";
 
     auto error = MessageBuilder::error(
-        static_cast<uint16_t>(NodeID::PLC),  // Source: PLC
-        static_cast<uint16_t>(NodeID::HMI),  // Destination: HMI
-        static_cast<uint16_t>(ClassID::Tag), // Class: Tag (echoed)
-        7,                                   // Instance: Tag7 (echoed)
-        TagAttr::Value,                      // Attribute: Value (echoed)
-        ErrorCode::InvalidAttribute          // Error code
+        0x0030,                     // Source: PLC
+        0x0010,                     // Destination: HMI
+        0x3000,                     // Class: Tag (echoed)
+        7,                          // Instance: Tag7 (echoed)
+        0x0001,                     // Attribute: Value (echoed)
+        ErrorCode::InvalidAttribute // Error code
     );
 
     Frame frame3 = error.build();
@@ -137,11 +137,11 @@ int main()
     std::cout << "-----------------------------------\n";
 
     auto subscribe = MessageBuilder::subscribe(
-        static_cast<uint16_t>(NodeID::HMI),
-        static_cast<uint16_t>(NodeID::PLC),
-        static_cast<uint16_t>(ClassID::Tag),
+        0x0010,
+        0x0030,
+        0x3000,
         7,
-        TagAttr::Value);
+        0x0001);
 
     Frame frame4 = subscribe.build();
     printFrame(frame4);
