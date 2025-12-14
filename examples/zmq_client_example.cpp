@@ -53,7 +53,6 @@ int main()
         // Build request message using the actual API
         auto builder = MessageBuilder::request(
             0x0010,
-            0x0030,
             0x3000,
             100, // Instance ID
             i    // Attribute ID

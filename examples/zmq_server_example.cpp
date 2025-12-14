@@ -92,9 +92,9 @@ int main()
             // Send error response
             auto errorBuilder = MessageBuilder::error(
                 0x0030,
-                0x0010,
                 0x3000,
-                0, 0,
+                0,
+                0,
                 ErrorCode::BadPayload);
             Frame errorFrame = errorBuilder.build();
 
@@ -127,7 +127,6 @@ int main()
 
         // Build response
         auto responseBuilder = MessageBuilder::response(
-            requestFrame.dstNodeID, // Swap source and dest
             requestFrame.srcNodeID,
             requestFrame.classID,
             requestFrame.instanceID,

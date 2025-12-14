@@ -59,7 +59,6 @@ void publisherThread()
             // Temperature event
             auto tempBuilder = MessageBuilder::event(
                 0x0010,
-                0x0030,
                 0x3000,
                 1, // Instance ID for temperature
                 1  // Attribute ID
@@ -79,7 +78,6 @@ void publisherThread()
             // Pressure event
             auto pressureBuilder = MessageBuilder::event(
                 0x0010,
-                0x0030,
                 0x3000,
                 2, // Instance ID for pressure
                 1  // Attribute ID

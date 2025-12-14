@@ -10,7 +10,6 @@ void printFrame(const Frame &frame)
     std::cout << "  Version: 0x" << std::hex << static_cast<int>(frame.version) << std::dec << "\n";
     std::cout << "  MsgType: " << toString(frame.msgType) << "\n";
     std::cout << "  SrcNode: 0x" << std::hex << frame.srcNodeID << std::dec << "\n";
-    std::cout << "  DstNode: 0x" << std::hex << frame.dstNodeID << std::dec << "\n";
     std::cout << "  ClassID: 0x" << std::hex << frame.classID << std::dec << "\n";
     std::cout << "  InstanceID: 0x" << std::hex << frame.instanceID << std::dec << "\n";
     std::cout << "  AttrID: 0x" << std::hex << frame.attrID << std::dec << "\n";
@@ -44,7 +43,6 @@ int main()
 
     auto request = MessageBuilder::request(
         0x0010, // Source: HMI
-        0x0030, // Destination: PLC
         0x3000, // Class: Tag
         7,      // Instance: Tag7
         0x0001  // Attribute: Value
@@ -85,7 +83,6 @@ int main()
 
     auto response = MessageBuilder::response(
                         0x0030, // Source: PLC
-                        0x0010, // Destination: HMI
                         0x3000, // Class: Tag
                         7,      // Instance: Tag7
                         0x0001  // Attribute: Value
@@ -116,7 +113,6 @@ int main()
 
     auto error = MessageBuilder::error(
         0x0030,                     // Source: PLC
-        0x0010,                     // Destination: HMI
         0x3000,                     // Class: Tag (echoed)
         7,                          // Instance: Tag7 (echoed)
         0x0001,                     // Attribute: Value (echoed)
@@ -138,7 +134,6 @@ int main()
 
     auto subscribe = MessageBuilder::subscribe(
         0x0010,
-        0x0030,
         0x3000,
         7,
         0x0001);

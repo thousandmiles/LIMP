@@ -14,7 +14,6 @@ int main()
     std::cout << "1. Tag Quality Response\n";
     auto qualityResp = MessageBuilder::response(
                            0x0030,
-                           0x0010,
                            0x3000,
                            10,
                            0x0002)
@@ -37,7 +36,6 @@ int main()
 
     auto timestampResp = MessageBuilder::response(
                              0x0030,
-                             0x0010,
                              0x3000,
                              10,
                              0x0003)
@@ -55,7 +53,6 @@ int main()
     std::cout << "3. Motion Position Response\n";
     auto positionResp = MessageBuilder::response(
                             0x0030,
-                            0x0010,
                             0x4000,
                             0, // Motor0
                             0x0001)
@@ -73,7 +70,6 @@ int main()
     std::cout << "4. Alarm Message Response\n";
     auto alarmResp = MessageBuilder::response(
                          0x0040,
-                         0x0010,
                          0x5000,
                          5,
                          0x0003)
@@ -93,7 +89,6 @@ int main()
 
     auto binaryResp = MessageBuilder::response(
                           0x0020,
-                          0x0010,
                           0x1000,
                           0,
                           0x0010 // Custom attribute
@@ -117,7 +112,6 @@ int main()
     std::cout << "6. EVENT - Tag Value Changed\n";
     auto eventMsg = MessageBuilder::event(
                         0x0030,
-                        0x0010,
                         0x3000,
                         7,
                         0x0001)
