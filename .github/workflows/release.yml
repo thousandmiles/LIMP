@@ -30,8 +30,7 @@ jobs:
 
             ### Downloads
             - `limp-${{ github.ref_name }}-linux-x64.tar.gz` - Linux x64
-            - `limp-${{ github.ref_name }}-darwin-x64.tar.gz` - macOS Intel
-            - `limp-${{ github.ref_name }}-darwin-arm64.tar.gz` - macOS ARM64
+            - `limp-${{ github.ref_name }}-windows-x64.zip` - Windows x64
 
             ### Quick Start
             ```bash
@@ -93,10 +92,10 @@ jobs:
           asset_name: limp-${{ github.ref_name }}-linux-x64.tar.gz
           asset_content_type: application/gzip
 
-  build-macos-intel:
-    name: Build macOS Intel
+  build-windows:
+    name: Build Windows x64
     needs: create-release
-    runs-on: macos-13
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -105,80 +104,34 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install build tools
-        run: |
-          brew install cmake
-
       - name: Install Conan
+        shell: powershell
         run: |
           pip install conan
           conan profile detect
 
       - name: Install dependencies with Conan
+        shell: powershell
         run: |
           conan install . --output-folder=. --build=missing -s build_type=Release
 
       - name: Build package
+        shell: powershell
         run: |
-          PKG="dist/limp-${{ github.ref_name }}-darwin-x64"
-          mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build build -j$(sysctl -n hw.ncpu)
-          cp build/liblimp.a ${PKG}/lib/
-          cp -r include/limp ${PKG}/include/
-          echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
-          cd dist && tar czf limp-${{ github.ref_name }}-darwin-x64.tar.gz limp-${{ github.ref_name }}-darwin-x64
+          $PKG = "dist/limp-${{ github.ref_name }}-windows-x64"
+          New-Item -ItemType Directory -Force -Path "$PKG/lib","$PKG/include" | Out-Null
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE="${PWD}/build/Release/generators/conan_toolchain.cmake" -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build build --config Release
+          Copy-Item -Path "build/Release/limp.lib" -Destination "$PKG/lib/"
+          Copy-Item -Recurse -Path "include/limp" -Destination "$PKG/include/"
+          Set-Content -Path "$PKG/README.md" -Value "# LIMP ${{ github.ref_name }}"
+          Compress-Archive -Path "$PKG" -DestinationPath "dist/limp-${{ github.ref_name }}-windows-x64.zip"
 
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/limp-${{ github.ref_name }}-darwin-x64.tar.gz
-          asset_name: limp-${{ github.ref_name }}-darwin-x64.tar.gz
-          asset_content_type: application/gzip
-
-  build-macos-arm:
-    name: Build macOS ARM64
-    needs: create-release
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install build tools
-        run: |
-          brew install cmake
-
-      - name: Install Conan
-        run: |
-          pip install conan
-          conan profile detect
-
-      - name: Install dependencies with Conan
-        run: |
-          conan install . --output-folder=. --build=missing -s build_type=Release
-
-      - name: Build package
-        run: |
-          PKG="dist/limp-${{ github.ref_name }}-darwin-arm64"
-          mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build build -j$(sysctl -n hw.ncpu)
-          cp build/liblimp.a ${PKG}/lib/
-          cp -r include/limp ${PKG}/include/
-          echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
-          cd dist && tar czf limp-${{ github.ref_name }}-darwin-arm64.tar.gz limp-${{ github.ref_name }}-darwin-arm64
-
-      - uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/limp-${{ github.ref_name }}-darwin-arm64.tar.gz
-          asset_name: limp-${{ github.ref_name }}-darwin-arm64.tar.gz
-          asset_content_type: application/gzip
+          asset_path: ./dist/limp-${{ github.ref_name }}-windows-x64.zip
+          asset_name: limp-${{ github.ref_name }}-windows-x64.zip
+          asset_content_type: application/zip
