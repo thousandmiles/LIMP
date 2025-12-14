@@ -10,7 +10,6 @@ void testBasicFrame()
 
     auto frame = MessageBuilder::request(
                      0x0010,
-                     0x0030,
                      0x3000,
                      7,
                      0x0001)
@@ -19,7 +18,7 @@ void testBasicFrame()
     assert(frame.version == PROTOCOL_VERSION);
     assert(frame.msgType == MsgType::REQUEST);
     assert(frame.srcNodeID == 0x0010);
-    assert(frame.dstNodeID == 0x0030);
+
     assert(frame.validate());
 
     std::vector<uint8_t> buffer;
@@ -40,7 +39,7 @@ void testPayloadTypes()
     std::cout << "Test: Payload Types... ";
 
     // UINT8
-    auto f1 = MessageBuilder::response(0x10, 0x20, 0x3000, 1, 1)
+    auto f1 = MessageBuilder::response(0x10, 0x3000, 1, 1)
                   .setPayload(static_cast<uint8_t>(42))
                   .build();
     assert(f1.payloadType == PayloadType::UINT8);
@@ -48,14 +47,14 @@ void testPayloadTypes()
     assert(p1.getUInt8().value() == 42);
 
     // UINT32
-    auto f2 = MessageBuilder::response(0x10, 0x20, 0x3000, 1, 1)
+    auto f2 = MessageBuilder::response(0x10, 0x3000, 1, 1)
                   .setPayload(static_cast<uint32_t>(12345678))
                   .build();
     MessageParser p2(f2);
     assert(p2.getUInt32().value() == 12345678);
 
     // FLOAT32
-    auto f3 = MessageBuilder::response(0x10, 0x20, 0x3000, 1, 1)
+    auto f3 = MessageBuilder::response(0x10, 0x3000, 1, 1)
                   .setPayload(123.45f)
                   .build();
     MessageParser p3(f3);
@@ -63,7 +62,7 @@ void testPayloadTypes()
     assert(val > 123.44f && val < 123.46f);
 
     // STRING
-    auto f4 = MessageBuilder::response(0x10, 0x20, 0x3000, 1, 1)
+    auto f4 = MessageBuilder::response(0x10, 0x3000, 1, 1)
                   .setPayload("Hello LIMP")
                   .build();
     MessageParser p4(f4);
@@ -76,7 +75,7 @@ void testCRC()
 {
     std::cout << "Test: CRC Calculation and Verification... ";
 
-    auto frame = MessageBuilder::response(0x10, 0x20, 0x3000, 1, 1)
+    auto frame = MessageBuilder::response(0x10, 0x3000, 1, 1)
                      .setPayload(123.45f)
                      .enableCRC(true)
                      .build();
@@ -103,7 +102,6 @@ void testErrorMessages()
 
     auto error = MessageBuilder::error(
                      0x0030,
-                     0x0010,
                      0x3000,
                      7,
                      0x0001,
@@ -125,7 +123,7 @@ void testEndianness()
 {
     std::cout << "Test: Endianness Conversion... ";
 
-    auto frame = MessageBuilder::response(0x1234, 0x5678, 0xABCD, 0xEF01, 0x2345)
+    auto frame = MessageBuilder::response(0x1234, 0xABCD, 0xEF01, 0x2345)
                      .setPayload(static_cast<uint32_t>(0xDEADBEEF))
                      .build();
 
@@ -137,11 +135,11 @@ void testEndianness()
     assert(buffer[2] == 0x12);
     assert(buffer[3] == 0x34);
 
-    // Payload (UINT32) at offset 16
-    assert(buffer[16] == 0xDE);
-    assert(buffer[17] == 0xAD);
-    assert(buffer[18] == 0xBE);
-    assert(buffer[19] == 0xEF);
+    // Payload (UINT32) at new offset due to header shrink (14 bytes)
+    assert(buffer[14] == 0xDE);
+    assert(buffer[15] == 0xAD);
+    assert(buffer[16] == 0xBE);
+    assert(buffer[17] == 0xEF);
 
     // Deserialize and verify
     Frame frame2;
@@ -158,22 +156,22 @@ void testMessageTypes()
 {
     std::cout << "Test: All Message Types... ";
 
-    auto req = MessageBuilder::request(0x10, 0x20, 0x3000, 1, 1).build();
+    auto req = MessageBuilder::request(0x10, 0x3000, 1, 1).build();
     assert(req.msgType == MsgType::REQUEST);
 
-    auto resp = MessageBuilder::response(0x20, 0x10, 0x3000, 1, 1).build();
+    auto resp = MessageBuilder::response(0x20, 0x3000, 1, 1).build();
     assert(resp.msgType == MsgType::RESPONSE);
 
-    auto evt = MessageBuilder::event(0x30, 0x10, 0x3000, 1, 1).build();
+    auto evt = MessageBuilder::event(0x30, 0x3000, 1, 1).build();
     assert(evt.msgType == MsgType::EVENT);
 
-    auto sub = MessageBuilder::subscribe(0x10, 0x30, 0x3000, 1, 1).build();
+    auto sub = MessageBuilder::subscribe(0x10, 0x3000, 1, 1).build();
     assert(sub.msgType == MsgType::SUBSCRIBE);
 
-    auto unsub = MessageBuilder::unsubscribe(0x10, 0x30, 0x3000, 1, 1).build();
+    auto unsub = MessageBuilder::unsubscribe(0x10, 0x3000, 1, 1).build();
     assert(unsub.msgType == MsgType::UNSUBSCRIBE);
 
-    auto ack = MessageBuilder::ack(0x20, 0x10, 0x3000, 1, 1).build();
+    auto ack = MessageBuilder::ack(0x20, 0x3000, 1, 1).build();
     assert(ack.msgType == MsgType::ACK);
 
     std::cout << "PASS\n";
