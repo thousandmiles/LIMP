@@ -57,6 +57,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
       - name: Install Conan
         run: |
           pip install conan
@@ -99,6 +104,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install build tools
+        run: |
+          brew install cmake
+
       - name: Install Conan
         run: |
           pip install conan
@@ -140,6 +149,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          brew install cmake
 
       - name: Install Conan
         run: |
