@@ -124,14 +124,10 @@ namespace limp
      * Validates CRC if present.
      *
      * @param data Pointer to binary buffer
-     * @param size Buffer size in bytes
+     * @param length Buffer size in bytes
      * @param frame Output frame structure
      * @return true on success, false if invalid format or CRC mismatch
      */
-    *@param length Buffer length
-            *@param frame Output frame
-                *@ return true on success *
-        /
-        bool deserializeFrame(const uint8_t *data, size_t length, Frame &frame);
+    bool deserializeFrame(const uint8_t *data, size_t length, Frame &frame);
 
 } // namespace limp
