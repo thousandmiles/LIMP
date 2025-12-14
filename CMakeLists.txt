@@ -96,7 +96,7 @@ target_include_directories(limp
 
 # Compiler warnings
 if(MSVC)
-    target_compile_options(limp PRIVATE /W4 /WX)
+    target_compile_options(limp PRIVATE /W4 /WX /utf-8)
 else()
     target_compile_options(limp PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
