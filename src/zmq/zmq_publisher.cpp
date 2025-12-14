@@ -85,7 +85,7 @@ namespace limp
         return false;
     }
 
-    ssize_t ZMQPublisher::receive(uint8_t *buffer, size_t maxSize)
+    std::ptrdiff_t ZMQPublisher::receive(uint8_t *buffer, size_t maxSize)
     {
         // Publishers don't receive
         (void)buffer;
