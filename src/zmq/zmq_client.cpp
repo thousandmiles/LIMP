@@ -50,7 +50,7 @@ namespace limp
         }
     }
 
-    ssize_t ZMQClient::receive(uint8_t *buffer, size_t maxSize)
+    std::ptrdiff_t ZMQClient::receive(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())
         {
@@ -75,7 +75,7 @@ namespace limp
             }
 
             std::memcpy(buffer, message.data(), receivedSize);
-            return static_cast<ssize_t>(receivedSize);
+            return static_cast<std::ptrdiff_t>(receivedSize);
         }
         catch (const zmq::error_t &e)
         {
@@ -98,7 +98,7 @@ namespace limp
     {
         (void)timeoutMs; // Timeout is set via socket options
         std::vector<uint8_t> buffer(2048);
-        ssize_t received = receive(buffer.data(), buffer.size());
+        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
         if (received <= 0)
         {
             return false;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zmq_transport_base.hpp"
+#include <cstddef>
 
 namespace limp
 {
@@ -89,7 +90,7 @@ namespace limp
          *
          * @return Always -1
          */
-        ssize_t receive(uint8_t *buffer, size_t maxSize);
+        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };
 
 } // namespace limp

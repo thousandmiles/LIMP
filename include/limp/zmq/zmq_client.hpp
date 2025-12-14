@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zmq_transport_base.hpp"
+#include <cstddef>
 
 namespace limp
 {
@@ -85,7 +86,7 @@ namespace limp
          * @param maxSize Maximum buffer size
          * @return Number of bytes received, 0 on timeout, -1 on error
          */
-        ssize_t receive(uint8_t *buffer, size_t maxSize);
+        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };
 
 } // namespace limp

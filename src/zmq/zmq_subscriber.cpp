@@ -97,7 +97,7 @@ namespace limp
         return false;
     }
 
-    ssize_t ZMQSubscriber::receive(uint8_t *buffer, size_t maxSize)
+    std::ptrdiff_t ZMQSubscriber::receive(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())
         {
@@ -151,7 +151,7 @@ namespace limp
                 offset += msg.size();
             }
 
-            return static_cast<ssize_t>(totalSize);
+            return static_cast<std::ptrdiff_t>(totalSize);
         }
         catch (const zmq::error_t &e)
         {
