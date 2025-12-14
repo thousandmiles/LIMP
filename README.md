@@ -26,6 +26,22 @@ cmake --build .
 # Creates: liblimp.a
 ```
 
+**Build with Examples & Tests (optional):**
+
+```bash
+# Enable examples and tests
+cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake \
+         -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
+cmake --build .
+
+# Run tests
+ctest
+
+# Run examples
+./examples/simple_request
+./examples/simple_response
+```
+
 ## Usage
 
 **Core Protocol:**
