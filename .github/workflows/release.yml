@@ -70,6 +70,8 @@ jobs:
       - name: Install dependencies with Conan
         run: |
           conan install . --output-folder=build --build=missing -s build_type=Release
+          echo "=== Conan output structure ==="
+          find build -name "conan_toolchain.cmake" -o -name "*.cmake" | head -20
 
       - name: Build package
         run: |
