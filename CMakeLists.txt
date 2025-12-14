@@ -20,8 +20,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build options
-option(LIMP_BUILD_EXAMPLES "Build example applications" ON)
-option(LIMP_BUILD_TESTS "Build unit tests" ON)
+option(LIMP_BUILD_EXAMPLES "Build example applications" OFF)
+option(LIMP_BUILD_TESTS "Build unit tests" OFF)
 option(LIMP_BUILD_SHARED "Build shared library" OFF)
 option(LIMP_BUILD_ZMQ "Build with ZeroMQ transport support" ON)
 
@@ -115,7 +115,15 @@ endif()
 
 # Link ZeroMQ if enabled
 if(LIMP_BUILD_ZMQ)
+    find_package(cppzmq REQUIRED)
+    # cppzmq brings in libzmq, which needs libsodium
+    # We need to make these dependencies available to consumers of limp
     target_link_libraries(limp PUBLIC cppzmq)
+    
+    # When building as static library, we need to ensure libsodium is available
+    # Find the libsodium library path from Conan
+    find_library(SODIUM_LIB sodium REQUIRED)
+    target_link_libraries(limp PUBLIC ${SODIUM_LIB})
 endif()
 
 # Examples
