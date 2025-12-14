@@ -64,14 +64,14 @@ jobs:
 
       - name: Install dependencies with Conan
         run: |
-          conan install . --output-folder=build --build=missing
+          conan install . --output-folder=build/Release --build=missing
 
       - name: Build package
         run: |
           PKG="dist/limp-${{ github.ref_name }}-linux-x64"
           mkdir -p ${PKG}/{lib,include}
           cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build . -j$(nproc)
           cp liblimp.a ../${PKG}/lib/
           cd .. && cp -r include/limp ${PKG}/include/
@@ -106,14 +106,14 @@ jobs:
 
       - name: Install dependencies with Conan
         run: |
-          conan install . --output-folder=build --build=missing
+          conan install . --output-folder=build/Release --build=missing
 
       - name: Build package
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-x64"
           mkdir -p ${PKG}/{lib,include}
           cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build . -j$(sysctl -n hw.ncpu)
           cp liblimp.a ../${PKG}/lib/
           cd .. && cp -r include/limp ${PKG}/include/
@@ -148,14 +148,14 @@ jobs:
 
       - name: Install dependencies with Conan
         run: |
-          conan install . --output-folder=build --build=missing
+          conan install . --output-folder=build/Release --build=missing
 
       - name: Build package
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-arm64"
           mkdir -p ${PKG}/{lib,include}
           cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build . -j$(sysctl -n hw.ncpu)
           cp liblimp.a ../${PKG}/lib/
           cd .. && cp -r include/limp ${PKG}/include/
