@@ -95,7 +95,7 @@ pip install conan
 conan profile detect
 
 # Build library
-conan install . --output-folder=. --build=missing -s build_type=Release
+conan install . --output-folder=. --build=missing -s build_type=Release -o "*:shared=False"
 cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 # Outputs: build/Release/limp.lib
