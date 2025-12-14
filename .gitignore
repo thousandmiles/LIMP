@@ -3,6 +3,22 @@ build/
 build_*/
 cmake-build-*/
 out/
+dist/
+
+# Conan
+.conan2/
+CMakeUserPresets.json
+conan.lock
+conaninfo.txt
+conanbuildinfo.*
+graph_info.json
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
 
 # IDE files
 .vscode/
