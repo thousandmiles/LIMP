@@ -4,47 +4,138 @@ Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC commun
 
 **Features:** Compact binary protocol (16-byte header + payload) | Builder pattern API | ZeroMQ transport | CRC16-MODBUS | Cross-platform
 
-## Quick Start
+## Linux Usage
 
-**Download Pre-built Package:**
+### Download Pre-built Package
 
 ```bash
-# Download from GitHub Releases
+# From GitHub Releases: https://github.com/forrestlinfeng/LIMP/releases
+wget https://github.com/forrestlinfeng/LIMP/releases/download/v0.1.0/limp-v0.1.0-linux-x64.tar.gz
 tar xzf limp-v0.1.0-linux-x64.tar.gz
-# Package contains: include/limp/*.hpp + lib/liblimp.a (with ZeroMQ)
+# Extracts to: include/limp/*.hpp + lib/liblimp.a
 ```
 
-**Or Build from Source:**
+### Build from Source
 
 ```bash
+# Prerequisites: pip, gcc, cmake
 pip install conan
 conan profile detect
-conan install . --output-folder=build --build=missing
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake
-cmake --build .
-# Creates: liblimp.a
+
+# Build library
+conan install . --output-folder=build --build=missing -s build_type=Release
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake
+cmake --build build -j
+# Outputs: build/liblimp.a
 ```
 
-**Build with Examples & Tests (optional):**
+### Build with Examples & Tests
 
 ```bash
-# Enable examples and tests
-cmake .. -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake \
-         -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
-cmake --build .
+# Add flags to CMake command
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake \
+      -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
+cmake --build build -j
 
 # Run tests
-ctest
+cd build && ctest
 
 # Run examples
-./examples/simple_request
-./examples/simple_response
+./build/examples/zmq_client_example
+./build/examples/zmq_server_example
+./build/examples/zmq_pubsub_example
 ```
 
-## Usage
+### Use in Your Project
 
-**Core Protocol:**
+**Direct compilation:**
+
+```bash
+g++ -std=c++17 -I./include myapp.cpp \
+    ./lib/liblimp.a -lzmq -lsodium -lpthread -o myapp
+```
+
+**CMake (recommended):**
+
+```cmake
+# Option 1: Use as subdirectory (handles dependencies automatically)
+add_subdirectory(path/to/LIMP)
+target_link_libraries(myapp PRIVATE limp)
+
+# Option 2: Link prebuilt library manually
+target_include_directories(myapp PRIVATE path/to/LIMP/include)
+target_link_libraries(myapp PRIVATE path/to/LIMP/lib/liblimp.a zmq sodium pthread)
+```
+
+## Windows Usage
+
+### Download Pre-built Package
+
+```powershell
+# From GitHub Releases: https://github.com/forrestlinfeng/LIMP/releases
+# Download limp-v0.1.0-windows-x64.zip
+# Extract to get: include/limp/*.hpp + lib/limp.lib
+```
+
+### Build from Source
+
+```powershell
+# Prerequisites: Python, Visual Studio 2022, CMake
+# Open "x64 Native Tools Command Prompt for VS 2022"
+
+pip install conan
+conan profile detect
+
+# Build library
+conan install . --output-folder=build --build=missing -s build_type=Release
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake
+cmake --build build --config Release
+# Outputs: build/Release/limp.lib
+```
+
+### Build with Examples & Tests
+
+```powershell
+# Add flags to CMake command
+cmake -B build -G "Visual Studio 17 2022" -A x64 `
+      -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake `
+      -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
+cmake --build build --config Release
+
+# Run tests
+cd build
+ctest -C Release
+
+# Run examples
+.\build\examples\Release\zmq_client_example.exe
+.\build\examples\Release\zmq_server_example.exe
+.\build\examples\Release\zmq_pubsub_example.exe
+```
+
+### Use in Your Project
+
+**Direct compilation:**
+
+```powershell
+cl /std:c++17 /I .\include myapp.cpp .\lib\limp.lib ws2_32.lib
+# Note: Ensure ZeroMQ and libsodium DLLs are in PATH or same directory
+```
+
+**CMake (recommended):**
+
+```cmake
+# Option 1: Use as subdirectory (handles dependencies automatically)
+add_subdirectory(path/to/LIMP)
+target_link_libraries(myapp PRIVATE limp)
+
+# Option 2: Link prebuilt library manually
+target_include_directories(myapp PRIVATE path/to/LIMP/include)
+target_link_libraries(myapp PRIVATE path/to/LIMP/lib/limp.lib ws2_32)
+```
+
+## API Examples
+
+**Core Protocol (Cross-platform):**
 
 ```cpp
 #include <limp/limp.hpp>
@@ -62,7 +153,7 @@ deserializeFrame(buffer, response);
 auto value = MessageParser(response).getFloat32();
 ```
 
-**ZeroMQ Transport:**
+**ZeroMQ Transport (Cross-platform):**
 
 ```cpp
 #include <limp/zmq/zmq.hpp>
@@ -83,44 +174,6 @@ client.send(MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1).build());
 Frame resp;
 client.receive(resp);
 ```
-
-## Integration
-
-**Using Pre-built Package:**
-
-Create `myapp.cpp`:
-
-```cpp
-#include <limp/limp.hpp>
-using namespace limp;
-
-int main() {
-    auto msg = MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1)
-        .setPayload(42).build();
-    return 0;
-}
-```
-
-**Option A - Direct compilation:**
-
-```bash
-g++ -std=c++17 -I/path/to/limp/include myapp.cpp /path/to/limp/lib/liblimp.a -o myapp
-```
-
-**Option B - CMake:**
-
-```cmake
-add_executable(myapp myapp.cpp)
-target_include_directories(myapp PRIVATE /path/to/limp/include)
-target_link_libraries(myapp /path/to/limp/lib/liblimp.a)
-```
-
-**Using Built from Source:**
-
-If you built from source, use the same approach but point to your build directory:
-
-- Headers: `LIMP/include/`
-- Library: `LIMP/build/liblimp.a`
 
 ## License
 
