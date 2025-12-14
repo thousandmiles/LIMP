@@ -33,23 +33,6 @@ cmake --build build -j
 # Outputs: build/liblimp.a
 ```
 
-### Build with Examples & Tests
-
-```bash
-# Add flags to CMake command
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake \
-      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
-cmake --build build -j
-
-# Run tests
-cd build && ctest
-
-# Run examples
-./build/examples/zmq_client_example
-./build/examples/zmq_server_example
-./build/examples/zmq_pubsub_example
-```
-
 ### Use in Your Project
 
 **Direct compilation:**
@@ -101,25 +84,6 @@ cmake --build build --config Release
 # Outputs: build/Release/limp.lib
 ```
 
-### Build with Examples & Tests
-
-```powershell
-# Add flags to CMake command
-cmake -B build -G "Visual Studio 17 2022" -A x64 `
-      -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" `
-      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
-cmake --build build --config Release
-
-# Run tests
-cd build
-ctest -C Release
-
-# Run examples
-.\build\examples\Release\zmq_client_example.exe
-.\build\examples\Release\zmq_server_example.exe
-.\build\examples\Release\zmq_pubsub_example.exe
-```
-
 ### Use in Your Project
 
 **Direct compilation:**
@@ -139,6 +103,67 @@ target_link_libraries(myapp PRIVATE limp)
 # Option 2: Link prebuilt library manually
 target_include_directories(myapp PRIVATE path/to/LIMP/include)
 target_link_libraries(myapp PRIVATE path/to/LIMP/lib/limp.lib ws2_32)
+```
+
+## Development & Testing
+
+### Building Examples
+
+**Linux:**
+
+```bash
+conan install . --output-folder=. --build=missing -s build_type=Release
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Release/generators/conan_toolchain.cmake \
+      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON
+cmake --build build -j
+
+# Run examples
+./build/examples/zmq_client_example
+./build/examples/zmq_server_example
+./build/examples/zmq_pubsub_example
+```
+
+**Windows:**
+
+```powershell
+conan install . --output-folder=. --build=missing -s build_type=Release -o "*:shared=False"
+cmake -B build -G "Visual Studio 17 2022" -A x64 `
+      -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" `
+      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON
+cmake --build build --config Release
+
+# Run examples
+.\build\examples\Release\zmq_client_example.exe
+.\build\examples\Release\zmq_server_example.exe
+.\build\examples\Release\zmq_pubsub_example.exe
+```
+
+### Running Tests
+
+**Note:** Tests require Debug build mode on both Linux and Windows due to optimization-related issues in the test suite.
+
+**Linux:**
+
+```bash
+rm -rf build
+conan install . --output-folder=. --build=missing -s build_type=Debug
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake \
+      -DCMAKE_BUILD_TYPE=Debug -DLIMP_BUILD_TESTS=ON
+cmake --build build -j
+cd build && ctest --output-on-failure
+```
+
+**Windows:**
+
+```powershell
+Remove-Item -Recurse -Force build
+conan install . --output-folder=. --build=missing -s build_type=Debug -o "*:shared=False"
+cmake -B build -G "Visual Studio 17 2022" -A x64 `
+      -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" `
+      -DCMAKE_BUILD_TYPE=Debug -DLIMP_BUILD_TESTS=ON
+cmake --build build --config Debug
+cd build
+ctest -C Debug --output-on-failure
 ```
 
 ## API Examples
