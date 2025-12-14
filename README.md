@@ -1,327 +1,144 @@
 # LIMP - Lightweight Industrial Messaging Protocol
 
-A modern C++17 library implementing the Lightweight Industrial Messaging Protocol (LIMP), designed for industrial automation, SCADA, HMI, and PLC communication systems.
+Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC communication).
 
 ## Features
 
-- 🚀 **Modern C++17** - Type-safe, header-friendly design with clean API
-- 🔧 **Cross-platform** - Builds on Linux, Windows, and macOS
-- 📦 **Zero external dependencies** - Pure C++ standard library
-- ⚡ **High performance** - Efficient binary serialization with minimal overhead
-- 🛡️ **CRC16 validation** - Optional data integrity checking
-- 🎯 **Builder pattern API** - Intuitive fluent interface for message construction
-- 🔌 **Transport agnostic** - Abstract interface for TCP, UDP, Serial, etc.
-- 📊 **Complete type support** - UINT8/16/32/64, FLOAT32/64, STRING, OPAQUE
-
-## Protocol Overview
-
-LIMP is a compact binary protocol for industrial messaging with:
-
-- **16-byte fixed header** with optional payload
-- **Request/Response, Event, Subscribe/Unsubscribe** message types
-- **Class/Instance/Attribute** addressing model
-- **Big-endian (network byte order)** encoding
-- **Optional CRC16-IBM** error detection
-- **Supports up to 65KB payloads**
+- **Modern C++17** - Type-safe, zero external dependencies (core)
+- **Compact Binary Protocol** - 16-byte header + payload, CRC16-MODBUS validation
+- **Builder Pattern API** - Fluent interface for message construction
+- **Optional ZeroMQ Transport** - High-performance REQ-REP and PUB-SUB patterns
+- **Cross-platform** - Linux, Windows, macOS
 
 ## Quick Start
 
-### Building the Library
-
-**Option 1: Simple Build Script (no CMake required)**
+### Build
 
 ```bash
-# Build everything
+# Simple build (no dependencies)
 ./build.sh
 
-# Run tests
-./build_simple/test_frame
+# With ZeroMQ support
+./build.sh --with-zmq
 
-# Run examples
-./build_simple/simple_request
-./build_simple/simple_response
-./build_simple/subscribe_example
-```
-
-**Option 2: CMake (if available)**
-
-```bash
+# Or using CMake
 mkdir build && cd build
-cmake ..
+cmake -DLIMP_BUILD_ZMQ=ON ..
 make
-
-# Run tests
-./tests/test_frame
-# or: ctest
-
-# Run examples
-./examples/simple_request
-./examples/simple_response
-./examples/subscribe_example
 ```
 
-### CMake Options
+### ZeroMQ Dependencies (optional)
 
 ```bash
-cmake -DLIMP_BUILD_EXAMPLES=ON \
-      -DLIMP_BUILD_TESTS=ON \
-      -DLIMP_BUILD_SHARED=OFF \
-      ..
+# Ubuntu/Debian
+sudo apt-get install libzmq3-dev
+git clone https://github.com/zeromq/cppzmq.git
+cd cppzmq && mkdir build && cd build
+cmake .. && sudo make install
 ```
 
-## Usage Examples
-
-### Creating a Request
+## Usage
 
 ```cpp
 #include <limp/limp.hpp>
-
 using namespace limp;
 
-// HMI requests Tag[7].Value from PLC
-auto request = MessageBuilder::request(
-    static_cast<uint16_t>(NodeID::HMI),
-    static_cast<uint16_t>(NodeID::PLC),
-    static_cast<uint16_t>(ClassID::Tag),
-    7,                    // Instance ID
-    TagAttr::Value        // Attribute ID
-);
+// Build request
+auto request = MessageBuilder::request(0x10, 0x30, 0x3000, 7, 1)
+    .setPayload(123.45f)
+    .build();
 
-Frame frame = request.build();
-
-// Serialize to binary
 std::vector<uint8_t> buffer;
-serializeFrame(frame, buffer);
-// Send buffer over network...
+serializeFrame(request, buffer);  // Send buffer...
+
+// Parse response
+Frame response;
+deserializeFrame(buffer, response);
+MessageParser parser(response);
+auto value = parser.getFloat32();
 ```
 
-### Creating a Response
+**ZeroMQ (if enabled):**
 
 ```cpp
-// PLC responds with float32 value
-auto response = MessageBuilder::response(
-    static_cast<uint16_t>(NodeID::PLC),
-    static_cast<uint16_t>(NodeID::HMI),
-    static_cast<uint16_t>(ClassID::Tag),
-    7,
-    TagAttr::Value
-)
-.setPayload(123.45f)
-.enableCRC(true);
+#include <limp/zmq/zmq.hpp>
 
-Frame frame = response.build();
-
-// Serialize and send...
-```
-
-### Parsing a Message
-
-```cpp
-// Deserialize received data
-Frame frame;
-deserializeFrame(buffer, frame);
-
-// Parse payload
-MessageParser parser(frame);
-
-if (parser.isResponse()) {
-    if (auto value = parser.getFloat32()) {
-        std::cout << "Tag value: " << *value << "\n";
-    }
+// Server
+ZMQServer server;
+server.bind("tcp://0.0.0.0:5555");
+Frame req;
+if (server.receive(req)) {
+    server.send(MessageBuilder::response(req.dstNodeID, req.srcNodeID,
+        req.classID, req.instanceID, req.attrID).setPayload("OK").build());
 }
 
-if (parser.isError()) {
-    if (auto code = parser.getErrorCode()) {
-        std::cout << "Error: " << toString(*code) << "\n";
-    }
-}
+// Client
+ZMQClient client;
+client.connect("tcp://127.0.0.1:5555");
+client.send(MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1).build());
+Frame resp;
+client.receive(resp);
+
+// Pub-Sub
+ZMQPublisher pub;
+pub.bind("tcp://0.0.0.0:5556");
+pub.publish("topic", data, size);
+
+ZMQSubscriber sub;
+sub.connect("tcp://127.0.0.1:5556");
+sub.subscribe("topic");
+sub.receive(frame);
 ```
 
-### Subscribe/Event Pattern
+## Protocol Overview
 
-```cpp
-// Client subscribes to tag updates
-auto subscribe = MessageBuilder::subscribe(
-    static_cast<uint16_t>(NodeID::HMI),
-    static_cast<uint16_t>(NodeID::PLC),
-    static_cast<uint16_t>(ClassID::Tag),
-    7,
-    TagAttr::Value
-).build();
+16-byte header + payload (0-65KB) | CRC16-MODBUS | Big-endian | Class/Instance/Attribute addressing
 
-// Server sends event when value changes
-auto event = MessageBuilder::event(
-    static_cast<uint16_t>(NodeID::PLC),
-    static_cast<uint16_t>(NodeID::HMI),
-    static_cast<uint16_t>(ClassID::Tag),
-    7,
-    TagAttr::Value
-)
-.setPayload(newValue)
-.enableCRC();
-```
+**Types:** REQUEST, RESPONSE, EVENT, ERROR, SUBSCRIBE, UNSUBSCRIBE, ACK
 
-### All Payload Types
+## API
 
-```cpp
-// UINT8, UINT16, UINT32, UINT64
-builder.setPayload(static_cast<uint8_t>(42));
-builder.setPayload(static_cast<uint32_t>(12345));
+**Core:** `MessageBuilder`, `MessageParser`, `Frame`, `serializeFrame()`, `deserializeFrame()`  
+**ZMQ:** `ZMQClient`, `ZMQServer`, `ZMQPublisher`, `ZMQSubscriber`, `ZMQConfig`  
+**Enums:** `NodeID`, `ClassID`, `MsgType`, `ErrorCode`
 
-// FLOAT32, FLOAT64
-builder.setPayload(3.14f);
-builder.setPayload(2.71828);
+## Integration
 
-// STRING
-builder.setPayload("Temperature alarm");
-
-// OPAQUE (binary data)
-std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-builder.setPayload(data);
-```
-
-## API Reference
-
-### Core Classes
-
-#### `MessageBuilder`
-
-Fluent API for constructing LIMP messages:
-
-- `request()`, `response()`, `event()`, `error()` - Static factory methods
-- `subscribe()`, `unsubscribe()`, `ack()` - Subscription management
-- `setPayload()` - Set typed payload (overloaded for all types)
-- `enableCRC()` - Enable CRC16 validation
-- `build()` - Generate final `Frame`
-
-#### `MessageParser`
-
-Extract typed data from frames:
-
-- `getUInt8()`, `getUInt16()`, `getUInt32()`, `getUInt64()`
-- `getFloat32()`, `getFloat64()`
-- `getString()`, `getOpaque()`
-- `getErrorCode()` - Extract error from ERROR messages
-- `isRequest()`, `isResponse()`, `isEvent()`, `isError()`
-
-#### `Frame`
-
-Low-level frame structure:
-
-- `serializeFrame()` - Encode frame to binary
-- `deserializeFrame()` - Decode binary to frame
-- `validate()` - Check frame integrity
-- `totalSize()` - Calculate wire size
-
-#### `Transport` (Abstract Interface)
-
-Implement for your transport layer:
-
-```cpp
-class MyTransport : public limp::Transport {
-    bool send(const Frame& frame) override;
-    bool receive(Frame& frame, int timeoutMs) override;
-    bool isConnected() const override;
-    void close() override;
-};
-```
-
-### Protocol Types
-
-#### Node IDs
-
-- `NodeID::HMI` (0x0010)
-- `NodeID::Server` (0x0020)
-- `NodeID::PLC` (0x0030)
-- `NodeID::Alarm` (0x0040)
-- `NodeID::Logger` (0x0050)
-- `NodeID::Broadcast` (0xFFFF)
-
-#### Message Types
-
-- `MsgType::REQUEST`, `RESPONSE`, `EVENT`, `ERROR`
-- `MsgType::SUBSCRIBE`, `UNSUBSCRIBE`, `ACK`
-
-#### Class IDs
-
-- `ClassID::System` (0x1000)
-- `ClassID::IO` (0x2000)
-- `ClassID::Tag` (0x3000)
-- `ClassID::Motion` (0x4000)
-- `ClassID::AlarmObject` (0x5000)
-- `ClassID::LoggerObject` (0x6000)
-
-## Project Structure
-
-```
-LIMP/
-├── include/limp/        # Public headers
-│   ├── types.hpp        # Protocol constants and enums
-│   ├── frame.hpp        # Frame serialization
-│   ├── message.hpp      # Builder and parser
-│   ├── transport.hpp    # Transport interface
-│   ├── utils.hpp        # Endianness helpers
-│   ├── crc.hpp          # CRC16 calculation
-│   └── limp.hpp         # Main include
-├── src/                 # Implementation
-├── examples/            # Usage examples
-├── tests/               # Unit tests
-├── CMakeLists.txt       # Build configuration
-└── README.md
-```
-
-## Installation
-
-### Using CMake (Install)
+**Install ZeroMQ (optional):**
 
 ```bash
-mkdir build && cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
-make
-sudo make install
+sudo apt-get install libzmq3-dev
+git clone https://github.com/zeromq/cppzmq.git && cd cppzmq
+mkdir build && cd build && cmake .. && sudo make install
 ```
 
-### Using CMake (FetchContent)
+**CMake FetchContent:**
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(
-    limp
-    GIT_REPOSITORY https://github.com/thousandmiles/LIMP.git
-    GIT_TAG main
-)
+FetchContent_Declare(limp GIT_REPOSITORY https://github.com/yourname/LIMP.git GIT_TAG main)
 FetchContent_MakeAvailable(limp)
-
-target_link_libraries(your_target PRIVATE limp)
+target_link_libraries(your_app PRIVATE limp)
+# set(LIMP_BUILD_ZMQ ON) for ZeroMQ support
 ```
 
-### Manual Integration
+**Submodule:**
 
-Copy `include/limp/` and `src/` into your project and add to your build system.
+```bash
+git submodule add https://github.com/yourname/LIMP.git third_party/limp
+```
 
-## Platform Support
+```cmake
+add_subdirectory(third_party/limp)
+target_link_libraries(your_app PRIVATE limp)
+```
 
-- **Linux** - GCC 7+, Clang 6+
-- **Windows** - MSVC 2017+, MinGW
-- **macOS** - Xcode 10+, Clang 6+
+## Notes
 
-Requires C++17 compiler.
+Not thread-safe. ZeroMQ sockets: one per thread. Requires C++17 (GCC 7+, Clang 6+, MSVC 2017+).
 
-## Performance Considerations
+**Implementation Protection:** Library uses header+source separation. Users receive only public API headers (.hpp) with comprehensive docstrings and compiled binaries - implementation details (.cpp) remain private.
 
-- **Zero-copy deserialization** possible with raw buffer API
-- **Small footprint**: ~16 bytes overhead per message
-- **CRC overhead**: 2 bytes + computation time (optional)
-- **Header-only option**: Define `LIMP_HEADER_ONLY` for inline implementation
+## License
 
-## Thread Safety
-
-The library is **not thread-safe** by design for performance. Use external synchronization if sharing objects across threads.
-
-## Version History
-
-- **0.1.0** - Initial release
-  - Core protocol implementation
-  - Builder/Parser API
-  - CRC16 validation
-  - Cross-platform support
+MIT
