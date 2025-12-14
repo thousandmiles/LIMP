@@ -81,46 +81,46 @@ namespace limp
 
         size_t offset = 0;
 
-        // Version
+        // 0： Version
         buffer[offset++] = frame.version;
 
-        // MsgType
+        // 1： MsgType
         buffer[offset++] = static_cast<uint8_t>(frame.msgType);
 
-        // SrcNodeID (big-endian)
+        // 2： SrcNodeID (big-endian)
         uint16_t srcBE = utils::hton16(frame.srcNodeID);
         std::memcpy(&buffer[offset], &srcBE, 2);
         offset += 2;
 
-        // DstNodeID (big-endian)
+        // 4： DstNodeID (big-endian)
         uint16_t dstBE = utils::hton16(frame.dstNodeID);
         std::memcpy(&buffer[offset], &dstBE, 2);
         offset += 2;
 
-        // ClassID (big-endian)
+        // 6： ClassID (big-endian)
         uint16_t classBE = utils::hton16(frame.classID);
         std::memcpy(&buffer[offset], &classBE, 2);
         offset += 2;
 
-        // InstanceID (big-endian)
+        // 8： InstanceID (big-endian)
         uint16_t instBE = utils::hton16(frame.instanceID);
         std::memcpy(&buffer[offset], &instBE, 2);
         offset += 2;
 
-        // AttrID (big-endian)
+        // 10： AttrID (big-endian)
         uint16_t attrBE = utils::hton16(frame.attrID);
         std::memcpy(&buffer[offset], &attrBE, 2);
         offset += 2;
 
-        // PayloadTypeID
+        // 12： PayloadTypeID
         buffer[offset++] = static_cast<uint8_t>(frame.payloadType);
 
-        // PayloadLen (big-endian)
+        // 13-14： PayloadLen (big-endian)
         uint16_t lenBE = utils::hton16(frame.payloadLen);
         std::memcpy(&buffer[offset], &lenBE, 2);
         offset += 2;
 
-        // Flags
+        // 15： Flags
         buffer[offset++] = frame.flags;
 
         // Payload
