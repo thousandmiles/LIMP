@@ -96,7 +96,7 @@ conan profile detect
 
 # Build library
 conan install . --output-folder=. --build=missing -s build_type=Release
-cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 # Outputs: build/Release/limp.lib
 ```
@@ -106,7 +106,7 @@ cmake --build build --config Release
 ```powershell
 # Add flags to CMake command
 cmake -B build -G "Visual Studio 17 2022" -A x64 `
-      -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake `
+      -DCMAKE_TOOLCHAIN_FILE="$PWD\build\generators\conan_toolchain.cmake" `
       -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
 cmake --build build --config Release
 
