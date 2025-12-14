@@ -9,7 +9,7 @@ Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC commun
 ### Download Pre-built Package
 
 ```bash
-# From GitHub Releases: https://github.com/forrestlinfeng/LIMP/releases
+# From GitHub Releases: https://github.com/thousandmiles/LIMP/releases/
 wget https://github.com/forrestlinfeng/LIMP/releases/download/v0.1.0/limp-v0.1.0-linux-x64.tar.gz
 tar xzf limp-v0.1.0-linux-x64.tar.gz
 # Extracts to: include/limp/*.hpp + lib/liblimp.a
@@ -19,7 +19,7 @@ tar xzf limp-v0.1.0-linux-x64.tar.gz
 
 ```bash
 # Clone repository
-git clone https://github.com/forrestlinfeng/LIMP.git
+git clone git@github.com:thousandmiles/LIMP.git
 cd LIMP
 
 # Prerequisites: pip, gcc, cmake
@@ -76,7 +76,7 @@ target_link_libraries(myapp PRIVATE path/to/LIMP/lib/liblimp.a zmq sodium pthrea
 ### Download Pre-built Package
 
 ```powershell
-# From GitHub Releases: https://github.com/forrestlinfeng/LIMP/releases
+# From GitHub Releases: https://github.com/thousandmiles/LIMP/releases/
 # Download limp-v0.1.0-windows-x64.zip
 # Extract to get: include/limp/*.hpp + lib/limp.lib
 ```
@@ -85,7 +85,7 @@ target_link_libraries(myapp PRIVATE path/to/LIMP/lib/liblimp.a zmq sodium pthrea
 
 ```powershell
 # Clone repository
-git clone https://github.com/forrestlinfeng/LIMP.git
+git clone git@github.com:thousandmiles/LIMP.git
 cd LIMP
 
 # Prerequisites: Python, Visual Studio 2022, CMake
