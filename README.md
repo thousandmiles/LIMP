@@ -18,6 +18,10 @@ tar xzf limp-v0.1.0-linux-x64.tar.gz
 ### Build from Source
 
 ```bash
+# Clone repository
+git clone https://github.com/forrestlinfeng/LIMP.git
+cd LIMP
+
 # Prerequisites: pip, gcc, cmake
 pip install conan
 conan profile detect
@@ -80,6 +84,10 @@ target_link_libraries(myapp PRIVATE path/to/LIMP/lib/liblimp.a zmq sodium pthrea
 ### Build from Source
 
 ```powershell
+# Clone repository
+git clone https://github.com/forrestlinfeng/LIMP.git
+cd LIMP
+
 # Prerequisites: Python, Visual Studio 2022, CMake
 # Open "x64 Native Tools Command Prompt for VS 2022"
 
@@ -87,8 +95,8 @@ pip install conan
 conan profile detect
 
 # Build library
-conan install . --output-folder=build --build=missing -s build_type=Release
-cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake
+conan install . --output-folder=. --build=missing -s build_type=Release
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 # Outputs: build/Release/limp.lib
 ```
@@ -99,7 +107,7 @@ cmake --build build --config Release
 # Add flags to CMake command
 cmake -B build -G "Visual Studio 17 2022" -A x64 `
       -DCMAKE_TOOLCHAIN_FILE=%CD%\build\generators\conan_toolchain.cmake `
-      -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
+      -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_EXAMPLES=ON -DLIMP_BUILD_TESTS=ON
 cmake --build build --config Release
 
 # Run tests
