@@ -9,17 +9,17 @@ void testBasicFrame()
     std::cout << "Test: Basic Frame Creation and Serialization... ";
 
     auto frame = MessageBuilder::request(
-                     static_cast<uint16_t>(NodeID::HMI),
-                     static_cast<uint16_t>(NodeID::PLC),
-                     static_cast<uint16_t>(ClassID::Tag),
+                     0x0010,
+                     0x0030,
+                     0x3000,
                      7,
-                     TagAttr::Value)
+                     0x0001)
                      .build();
 
     assert(frame.version == PROTOCOL_VERSION);
     assert(frame.msgType == MsgType::REQUEST);
-    assert(frame.srcNodeID == static_cast<uint16_t>(NodeID::HMI));
-    assert(frame.dstNodeID == static_cast<uint16_t>(NodeID::PLC));
+    assert(frame.srcNodeID == 0x0010);
+    assert(frame.dstNodeID == 0x0030);
     assert(frame.validate());
 
     std::vector<uint8_t> buffer;
@@ -102,11 +102,11 @@ void testErrorMessages()
     std::cout << "Test: Error Messages... ";
 
     auto error = MessageBuilder::error(
-                     static_cast<uint16_t>(NodeID::PLC),
-                     static_cast<uint16_t>(NodeID::HMI),
-                     static_cast<uint16_t>(ClassID::Tag),
+                     0x0030,
+                     0x0010,
+                     0x3000,
                      7,
-                     TagAttr::Value,
+                     0x0001,
                      ErrorCode::InvalidAttribute)
                      .build();
 
