@@ -120,7 +120,7 @@ jobs:
         run: |
           $PKG = "dist/limp-${{ github.ref_name }}-windows-x64"
           New-Item -ItemType Directory -Force -Path "$PKG/lib","$PKG/include" | Out-Null
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE="${PWD}/build/Release/generators/conan_toolchain.cmake" -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="${PWD}/build/generators/conan_toolchain.cmake" -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build build --config Release
           Copy-Item -Path "build/Release/limp.lib" -Destination "$PKG/lib/"
           Copy-Item -Recurse -Path "include/limp" -Destination "$PKG/include/"
