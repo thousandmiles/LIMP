@@ -143,7 +143,7 @@ void subscriberThread(const std::string &topic)
     while (running && eventCount < 10)
     {
         uint8_t buffer[1024];
-        ssize_t received = subscriber.receive(buffer, sizeof(buffer));
+        std::ptrdiff_t received = subscriber.receive(buffer, sizeof(buffer));
 
         if (received < 0)
         {

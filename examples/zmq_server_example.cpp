@@ -66,7 +66,7 @@ int main()
     {
         // Receive request
         uint8_t requestBuffer[1024];
-        ssize_t received = server.receive(requestBuffer, sizeof(requestBuffer));
+        std::ptrdiff_t received = server.receive(requestBuffer, sizeof(requestBuffer));
 
         if (received < 0)
         {

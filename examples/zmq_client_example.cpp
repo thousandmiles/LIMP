@@ -82,7 +82,7 @@ int main()
         uint8_t responseBuffer[1024];
         std::cout << "Waiting for response..." << std::endl;
 
-        ssize_t received = client.receive(responseBuffer, sizeof(responseBuffer));
+        std::ptrdiff_t received = client.receive(responseBuffer, sizeof(responseBuffer));
 
         if (received < 0)
         {
