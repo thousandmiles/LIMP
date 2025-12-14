@@ -10,13 +10,13 @@ namespace limp
     constexpr uint8_t PROTOCOL_VERSION = 0x01;
 
     /** @brief Minimum valid frame size (header only) */
-    constexpr uint16_t MIN_FRAME_SIZE = 16;
+    constexpr uint16_t MIN_FRAME_SIZE = 14;
 
     /** @brief Maximum payload size in bytes */
     constexpr uint16_t MAX_PAYLOAD_SIZE = 65534;
 
     /** @brief Fixed header size in bytes */
-    constexpr uint16_t HEADER_SIZE = 16;
+    constexpr uint16_t HEADER_SIZE = 14;
 
     /** @brief CRC16 checksum size in bytes */
     constexpr uint16_t CRC_SIZE = 2;

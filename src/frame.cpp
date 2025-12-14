@@ -7,7 +7,7 @@ namespace limp
 {
 
     Frame::Frame()
-        : version(PROTOCOL_VERSION), msgType(MsgType::REQUEST), srcNodeID(0), dstNodeID(0), classID(0), instanceID(0), attrID(0), payloadType(PayloadType::NONE), payloadLen(0), flags(0)
+        : version(PROTOCOL_VERSION), msgType(MsgType::REQUEST), srcNodeID(0), classID(0), instanceID(0), attrID(0), payloadType(PayloadType::NONE), payloadLen(0), flags(0)
     {
     }
 
@@ -92,35 +92,30 @@ namespace limp
         std::memcpy(&buffer[offset], &srcBE, 2);
         offset += 2;
 
-        // 4： DstNodeID (big-endian)
-        uint16_t dstBE = utils::hton16(frame.dstNodeID);
-        std::memcpy(&buffer[offset], &dstBE, 2);
-        offset += 2;
-
-        // 6： ClassID (big-endian)
+        // 4： ClassID (big-endian)
         uint16_t classBE = utils::hton16(frame.classID);
         std::memcpy(&buffer[offset], &classBE, 2);
         offset += 2;
 
-        // 8： InstanceID (big-endian)
+        // 6： InstanceID (big-endian)
         uint16_t instBE = utils::hton16(frame.instanceID);
         std::memcpy(&buffer[offset], &instBE, 2);
         offset += 2;
 
-        // 10： AttrID (big-endian)
+        // 8： AttrID (big-endian)
         uint16_t attrBE = utils::hton16(frame.attrID);
         std::memcpy(&buffer[offset], &attrBE, 2);
         offset += 2;
 
-        // 12： PayloadTypeID
+        // 10： PayloadTypeID
         buffer[offset++] = static_cast<uint8_t>(frame.payloadType);
 
-        // 13-14： PayloadLen (big-endian)
+        // 11-12： PayloadLen (big-endian)
         uint16_t lenBE = utils::hton16(frame.payloadLen);
         std::memcpy(&buffer[offset], &lenBE, 2);
         offset += 2;
 
-        // 15： Flags
+        // 13： Flags
         buffer[offset++] = frame.flags;
 
         // Payload
@@ -170,12 +165,6 @@ namespace limp
         uint16_t srcBE;
         std::memcpy(&srcBE, &data[offset], 2);
         frame.srcNodeID = utils::ntoh16(srcBE);
-        offset += 2;
-
-        // DstNodeID (big-endian)
-        uint16_t dstBE;
-        std::memcpy(&dstBE, &data[offset], 2);
-        frame.dstNodeID = utils::ntoh16(dstBE);
         offset += 2;
 
         // ClassID (big-endian)

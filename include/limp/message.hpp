@@ -67,13 +67,6 @@ namespace limp
         MessageBuilder &setSrcNode(uint16_t nodeID);
 
         /**
-         * @brief Set destination node ID
-         * @param nodeID Destination node identifier
-         * @return Reference to builder for chaining
-         */
-        MessageBuilder &setDstNode(uint16_t nodeID);
-
-        /**
          * @brief Set class ID
          * @param classID Object class identifier
          * @return Reference to builder for chaining
@@ -160,7 +153,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as REQUEST
          */
-        static MessageBuilder request(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder request(uint16_t src, uint16_t classID,
                                       uint16_t instanceID, uint16_t attrID);
 
         /**
@@ -172,7 +165,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as RESPONSE
          */
-        static MessageBuilder response(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder response(uint16_t src, uint16_t classID,
                                        uint16_t instanceID, uint16_t attrID);
 
         /**
@@ -184,7 +177,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as EVENT
          */
-        static MessageBuilder event(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder event(uint16_t src, uint16_t classID,
                                     uint16_t instanceID, uint16_t attrID);
 
         /**
@@ -197,7 +190,7 @@ namespace limp
          * @param code Error code
          * @return MessageBuilder configured as ERROR
          */
-        static MessageBuilder error(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder error(uint16_t src, uint16_t classID,
                                     uint16_t instanceID, uint16_t attrID, ErrorCode code);
 
         /**
@@ -209,7 +202,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as SUBSCRIBE
          */
-        static MessageBuilder subscribe(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder subscribe(uint16_t src, uint16_t classID,
                                         uint16_t instanceID, uint16_t attrID);
 
         /**
@@ -221,7 +214,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as UNSUBSCRIBE
          */
-        static MessageBuilder unsubscribe(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder unsubscribe(uint16_t src, uint16_t classID,
                                           uint16_t instanceID, uint16_t attrID);
 
         /**
@@ -233,7 +226,7 @@ namespace limp
          * @param attrID Attribute ID
          * @return MessageBuilder configured as ACK
          */
-        static MessageBuilder ack(uint16_t src, uint16_t dst, uint16_t classID,
+        static MessageBuilder ack(uint16_t src, uint16_t classID,
                                   uint16_t instanceID, uint16_t attrID);
 
         /** @} */
@@ -319,7 +312,7 @@ namespace limp
         uint16_t srcNode() const { return frame_.srcNodeID; }
 
         /** @brief Get destination node ID */
-        uint16_t dstNode() const { return frame_.dstNodeID; }
+        // Destination node accessor removed
 
         /** @brief Get class ID */
         uint16_t classID() const { return frame_.classID; }

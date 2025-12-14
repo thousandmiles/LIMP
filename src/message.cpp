@@ -31,12 +31,6 @@ namespace limp
         return *this;
     }
 
-    MessageBuilder &MessageBuilder::setDstNode(uint16_t nodeID)
-    {
-        frame_.dstNodeID = nodeID;
-        return *this;
-    }
-
     MessageBuilder &MessageBuilder::setClass(uint16_t classID)
     {
         frame_.classID = classID;
@@ -157,13 +151,12 @@ namespace limp
         return frame_;
     }
 
-    MessageBuilder MessageBuilder::request(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::request(uint16_t src, uint16_t classID,
                                            uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::REQUEST)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID)
@@ -171,39 +164,36 @@ namespace limp
         return builder;
     }
 
-    MessageBuilder MessageBuilder::response(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::response(uint16_t src, uint16_t classID,
                                             uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::RESPONSE)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID);
         return builder;
     }
 
-    MessageBuilder MessageBuilder::event(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::event(uint16_t src, uint16_t classID,
                                          uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::EVENT)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID);
         return builder;
     }
 
-    MessageBuilder MessageBuilder::error(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::error(uint16_t src, uint16_t classID,
                                          uint16_t instanceID, uint16_t attrID, ErrorCode code)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::ERROR)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID)
@@ -211,13 +201,12 @@ namespace limp
         return builder;
     }
 
-    MessageBuilder MessageBuilder::subscribe(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::subscribe(uint16_t src, uint16_t classID,
                                              uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::SUBSCRIBE)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID)
@@ -225,13 +214,12 @@ namespace limp
         return builder;
     }
 
-    MessageBuilder MessageBuilder::unsubscribe(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::unsubscribe(uint16_t src, uint16_t classID,
                                                uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::UNSUBSCRIBE)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID)
@@ -239,13 +227,12 @@ namespace limp
         return builder;
     }
 
-    MessageBuilder MessageBuilder::ack(uint16_t src, uint16_t dst, uint16_t classID,
+    MessageBuilder MessageBuilder::ack(uint16_t src, uint16_t classID,
                                        uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::ACK)
             .setSrcNode(src)
-            .setDstNode(dst)
             .setClass(classID)
             .setInstance(instanceID)
             .setAttribute(attrID)

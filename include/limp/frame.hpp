@@ -17,13 +17,12 @@ namespace limp
      * - Byte 0: Version (0x01)
      * - Byte 1: Message Type
      * - Bytes 2-3: Source Node ID (big-endian)
-     * - Bytes 4-5: Destination Node ID (big-endian)
-     * - Bytes 6-7: Class ID (big-endian)
-     * - Bytes 8-9: Instance ID (big-endian)
-     * - Bytes 10-11: Attribute ID (big-endian)
-     * - Byte 12: Payload Type
-     * - Byte 13: Flags
-     * - Bytes 14-15: Payload Length (big-endian)
+     * - Bytes 4-5: Class ID (big-endian)
+     * - Bytes 6-7: Instance ID (big-endian)
+     * - Bytes 8-9: Attribute ID (big-endian)
+     * - Byte 10: Payload Type
+     * - Byte 11: Flags
+     * - Bytes 12-13: Payload Length (big-endian)
      * - Bytes 16+: Payload data (0-65534 bytes)
      * - Optional: CRC16-MODBUS (2 bytes) if CRC flag set
      */
@@ -37,9 +36,6 @@ namespace limp
 
         /** @brief Source node identifier */
         uint16_t srcNodeID;
-
-        /** @brief Destination node identifier */
-        uint16_t dstNodeID;
 
         /** @brief Object class identifier */
         uint16_t classID;
