@@ -75,7 +75,7 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-linux-x64"
           mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build build -j$(nproc)
           cp build/liblimp.a ${PKG}/lib/
           cp -r include/limp ${PKG}/include/
@@ -120,7 +120,7 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-x64"
           mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build build -j$(sysctl -n hw.ncpu)
           cp build/liblimp.a ${PKG}/lib/
           cp -r include/limp ${PKG}/include/
@@ -165,7 +165,7 @@ jobs:
         run: |
           PKG="dist/limp-${{ github.ref_name }}-darwin-arm64"
           mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
           cmake --build build -j$(sysctl -n hw.ncpu)
           cp build/liblimp.a ${PKG}/lib/
           cp -r include/limp ${PKG}/include/
