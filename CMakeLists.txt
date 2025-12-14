@@ -6,6 +6,11 @@ project(LIMP
     LANGUAGES CXX
 )
 
+# Conan integration
+if(EXISTS ${CMAKE_BINARY_DIR}/conan_toolchain.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_toolchain.cmake)
+endif()
+
 # C++17 standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,7 +23,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(LIMP_BUILD_EXAMPLES "Build example applications" ON)
 option(LIMP_BUILD_TESTS "Build unit tests" ON)
 option(LIMP_BUILD_SHARED "Build shared library" OFF)
-option(LIMP_BUILD_ZMQ "Build with ZeroMQ transport support" OFF)
+option(LIMP_BUILD_ZMQ "Build with ZeroMQ transport support" ON)
 
 # Platform-specific settings
 if(WIN32)
@@ -84,14 +89,12 @@ add_library(limp ${LIMP_LIBRARY_TYPE} ${LIMP_SOURCES} ${LIMP_HEADERS})
 set_target_properties(limp PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "${LIMP_HEADERS}"
 )
 
 # Include directories
 target_include_directories(limp
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -125,40 +128,3 @@ if(LIMP_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
-
-# Installation
-include(GNUInstallDirs)
-
-install(TARGETS limp
-    EXPORT LIMPTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/limp
-)
-
-install(EXPORT LIMPTargets
-    FILE LIMPTargets.cmake
-    NAMESPACE LIMP::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
-)
-
-# Generate config file
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LIMPConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfig.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
-)
-
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/LIMPConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LIMP
-)

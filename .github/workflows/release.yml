@@ -1,0 +1,169 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: LIMP ${{ github.ref_name }}
+          body: |
+            ## LIMP - Lightweight Industrial Messaging Protocol
+
+            Modern C++17 library for industrial automation messaging.
+
+            ### Downloads
+            - `limp-${{ github.ref_name }}-linux-x64.tar.gz` - Linux x64
+            - `limp-${{ github.ref_name }}-darwin-x64.tar.gz` - macOS Intel
+            - `limp-${{ github.ref_name }}-darwin-arm64.tar.gz` - macOS ARM64
+
+            ### Quick Start
+            ```bash
+            tar xzf limp-${{ github.ref_name }}-linux-x64.tar.gz
+            cd limp-${{ github.ref_name }}-linux-x64
+            cp -r include/limp your_project/include/
+            cp lib/liblimp.a your_project/lib/
+            ```
+
+            See [README](https://github.com/${{ github.repository }}) for details.
+          draft: false
+          prerelease: false
+
+  build-linux:
+    name: Build Linux x64
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+
+      - name: Install dependencies with Conan
+        run: |
+          conan install . --output-folder=build --build=missing
+
+      - name: Build package
+        run: |
+          PKG="dist/limp-${{ github.ref_name }}-linux-x64"
+          mkdir -p ${PKG}/{lib,include}
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build . -j$(nproc)
+          cp liblimp.a ../${PKG}/lib/
+          cd .. && cp -r include/limp ${PKG}/include/
+          echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
+          cd dist && tar czf limp-${{ github.ref_name }}-linux-x64.tar.gz limp-${{ github.ref_name }}-linux-x64
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/limp-${{ github.ref_name }}-linux-x64.tar.gz
+          asset_name: limp-${{ github.ref_name }}-linux-x64.tar.gz
+          asset_content_type: application/gzip
+
+  build-macos-intel:
+    name: Build macOS Intel
+    needs: create-release
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+
+      - name: Install dependencies with Conan
+        run: |
+          conan install . --output-folder=build --build=missing
+
+      - name: Build package
+        run: |
+          PKG="dist/limp-${{ github.ref_name }}-darwin-x64"
+          mkdir -p ${PKG}/{lib,include}
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build . -j$(sysctl -n hw.ncpu)
+          cp liblimp.a ../${PKG}/lib/
+          cd .. && cp -r include/limp ${PKG}/include/
+          echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
+          cd dist && tar czf limp-${{ github.ref_name }}-darwin-x64.tar.gz limp-${{ github.ref_name }}-darwin-x64
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/limp-${{ github.ref_name }}-darwin-x64.tar.gz
+          asset_name: limp-${{ github.ref_name }}-darwin-x64.tar.gz
+          asset_content_type: application/gzip
+
+  build-macos-arm:
+    name: Build macOS ARM64
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+
+      - name: Install dependencies with Conan
+        run: |
+          conan install . --output-folder=build --build=missing
+
+      - name: Build package
+        run: |
+          PKG="dist/limp-${{ github.ref_name }}-darwin-arm64"
+          mkdir -p ${PKG}/{lib,include}
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
+          cmake --build . -j$(sysctl -n hw.ncpu)
+          cp liblimp.a ../${PKG}/lib/
+          cd .. && cp -r include/limp ${PKG}/include/
+          echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
+          cd dist && tar czf limp-${{ github.ref_name }}-darwin-arm64.tar.gz limp-${{ github.ref_name }}-darwin-arm64
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/limp-${{ github.ref_name }}-darwin-arm64.tar.gz
+          asset_name: limp-${{ github.ref_name }}-darwin-arm64.tar.gz
+          asset_content_type: application/gzip
