@@ -1,5 +1,5 @@
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 from conan.tools.files import copy
 
 
@@ -37,11 +37,15 @@ class LimpConan(ConanFile):
         cmake_layout(self)
 
     def generate(self):
+        # Generate CMake toolchain and dependency files so find_package() works
         tc = CMakeToolchain(self)
         tc.variables["LIMP_BUILD_ZMQ"] = self.options.with_zmq
         tc.variables["LIMP_BUILD_EXAMPLES"] = False
         tc.variables["LIMP_BUILD_TESTS"] = False
         tc.generate()
+
+        deps = CMakeDeps(self)
+        deps.generate()
 
     def build(self):
         cmake = CMake(self)
