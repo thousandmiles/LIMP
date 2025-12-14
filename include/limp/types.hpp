@@ -6,55 +6,85 @@
 namespace limp
 {
 
-    // Protocol version
+    /** @brief LIMP protocol version number */
     constexpr uint8_t PROTOCOL_VERSION = 0x01;
 
-    // Frame size constraints
+    /** @brief Minimum valid frame size (header only) */
     constexpr uint16_t MIN_FRAME_SIZE = 16;
+
+    /** @brief Maximum payload size in bytes */
     constexpr uint16_t MAX_PAYLOAD_SIZE = 65534;
+
+    /** @brief Fixed header size in bytes */
     constexpr uint16_t HEADER_SIZE = 16;
+
+    /** @brief CRC16 checksum size in bytes */
     constexpr uint16_t CRC_SIZE = 2;
 
-    // Node IDs
+    /**
+     * @brief Predefined node identifiers
+     *
+     * Standard node IDs for common industrial automation components.
+     * Custom nodes should use ranges: 0x7000-0x7FFF (vendor) or 0x8000-0xFFFE (user).
+     */
     enum class NodeID : uint16_t
     {
-        HMI = 0x0010,
-        Server = 0x0020,
-        PLC = 0x0030,
-        Alarm = 0x0040,
-        Logger = 0x0050,
-        Broadcast = 0xFFFF
+        HMI = 0x0010,      ///< Human-Machine Interface
+        Server = 0x0020,   ///< Server/Gateway node
+        PLC = 0x0030,      ///< Programmable Logic Controller
+        Alarm = 0x0040,    ///< Alarm management system
+        Logger = 0x0050,   ///< Data logger
+        Broadcast = 0xFFFF ///< Broadcast to all nodes
     };
 
-    // Node ID ranges
+    /** @brief Start of protocol-reserved node ID range */
     constexpr uint16_t NODE_PROTOCOL_BASE = 0x0001;
+
+    /** @brief End of protocol-reserved node ID range */
     constexpr uint16_t NODE_PROTOCOL_END = 0x6FFF;
+
+    /** @brief Start of vendor-specific node ID range */
     constexpr uint16_t NODE_VENDOR_BASE = 0x7000;
+
+    /** @brief End of vendor-specific node ID range */
     constexpr uint16_t NODE_VENDOR_END = 0x7FFF;
+
+    /** @brief Start of user-defined node ID range */
     constexpr uint16_t NODE_USER_BASE = 0x8000;
+
+    /** @brief End of user-defined node ID range */
     constexpr uint16_t NODE_USER_END = 0xFFFE;
 
-    // Message Types
+    /**
+     * @brief Message type identifiers
+     *
+     * Defines the purpose and semantics of a LIMP message.
+     */
     enum class MsgType : uint8_t
     {
-        REQUEST = 0x01,
-        RESPONSE = 0x02,
-        EVENT = 0x03,
-        ERROR = 0x04,
-        SUBSCRIBE = 0x05,
-        UNSUBSCRIBE = 0x06,
-        ACK = 0x07
+        REQUEST = 0x01,     ///< Request data or action from target
+        RESPONSE = 0x02,    ///< Response to a REQUEST
+        EVENT = 0x03,       ///< Unsolicited event notification
+        ERROR = 0x04,       ///< Error response
+        SUBSCRIBE = 0x05,   ///< Subscribe to data changes
+        UNSUBSCRIBE = 0x06, ///< Unsubscribe from data changes
+        ACK = 0x07          ///< Acknowledgment
     };
 
-    // Class IDs
+    /**
+     * @brief Object class identifiers
+     *
+     * Defines standard object classes for industrial automation.
+     * Similar to EtherNet/IP CIP object model.
+     */
     enum class ClassID : uint16_t
     {
-        System = 0x1000,
-        IO = 0x2000,
-        Tag = 0x3000,
-        Motion = 0x4000,
-        AlarmObject = 0x5000,
-        LoggerObject = 0x6000
+        System = 0x1000,      ///< System-level objects
+        IO = 0x2000,          ///< I/O point objects
+        Tag = 0x3000,         ///< Data tag objects
+        Motion = 0x4000,      ///< Motion control objects
+        AlarmObject = 0x5000, ///< Alarm objects
+        LoggerObject = 0x6000 ///< Logger objects
     };
 
     // Class ID ranges
@@ -93,57 +123,85 @@ namespace limp
         constexpr uint16_t Message = 0x0003;
     }
 
-    // Error Codes
+    /**
+     * @brief Error code identifiers
+     *
+     * Standard error codes for ERROR message types.
+     */
     enum class ErrorCode : uint8_t
     {
-        InvalidClass = 0x01,
-        InvalidInstance = 0x02,
-        InvalidAttribute = 0x03,
-        PermissionDenied = 0x04,
-        BadPayload = 0x05,
-        InternalError = 0x06,
-        UnsupportedVersion = 0x07,
-        InvalidFlags = 0x08
+        InvalidClass = 0x01,       ///< Class ID not recognized
+        InvalidInstance = 0x02,    ///< Instance ID not found
+        InvalidAttribute = 0x03,   ///< Attribute ID not supported
+        PermissionDenied = 0x04,   ///< Access denied
+        BadPayload = 0x05,         ///< Invalid payload data
+        InternalError = 0x06,      ///< Internal server error
+        UnsupportedVersion = 0x07, ///< Protocol version not supported
+        InvalidFlags = 0x08        ///< Invalid frame flags
     };
 
-    // Payload Types
+    /**
+     * @brief Payload data type identifiers
+     *
+     * Defines the type and encoding of payload data.
+     */
     enum class PayloadType : uint8_t
     {
-        NONE = 0x00,
-        UINT8 = 0x01,
-        UINT16 = 0x02,
-        UINT32 = 0x03,
-        UINT64 = 0x04,
-        FLOAT32 = 0x05,
-        FLOAT64 = 0x06,
-        STRING = 0x07,
-        OPAQUE = 0x08
+        NONE = 0x00,    ///< No payload
+        UINT8 = 0x01,   ///< 8-bit unsigned integer
+        UINT16 = 0x02,  ///< 16-bit unsigned integer (big-endian)
+        UINT32 = 0x03,  ///< 32-bit unsigned integer (big-endian)
+        UINT64 = 0x04,  ///< 64-bit unsigned integer (big-endian)
+        FLOAT32 = 0x05, ///< 32-bit IEEE 754 float (big-endian)
+        FLOAT64 = 0x06, ///< 64-bit IEEE 754 double (big-endian)
+        STRING = 0x07,  ///< UTF-8 string (length-prefixed)
+        OPAQUE = 0x08   ///< Opaque binary data
     };
 
-    // Quality values for Tag.Quality attribute
+    /**
+     * @brief Quality values for Tag.Quality attribute
+     *
+     * Indicates data quality status for tag values.
+     */
     enum class Quality : uint8_t
     {
-        Bad = 0,
-        Good = 1,
-        Uncertain = 2
+        Bad = 0,      ///< Data is not reliable
+        Good = 1,     ///< Data is valid and reliable
+        Uncertain = 2 ///< Data quality is uncertain
     };
 
-    // Alarm severity values
+    /**
+     * @brief Alarm severity levels
+     *
+     * Standard severity classification for alarm objects.
+     */
     enum class Severity : uint8_t
     {
-        Info = 0,
-        Warning = 1,
-        Critical = 2
+        Info = 0,    ///< Informational message
+        Warning = 1, ///< Warning condition
+        Critical = 2 ///< Critical alarm
     };
 
-    // Frame flags
+    /**
+     * @brief Frame flag bit definitions
+     */
     namespace Flags
     {
+        /** @brief Bit 0: CRC16 checksum is present at end of frame */
         constexpr uint8_t CRC_PRESENT = 0x01;
+
+        /** @brief Bits 1-7: Reserved for future use */
         constexpr uint8_t RESERVED_MASK = 0xFE;
     }
 
-    // Get payload type size (returns 0 for variable-length types)
+    /**
+     * @brief Get fixed size of payload type in bytes
+     *
+     * Returns 0 for variable-length types (STRING, OPAQUE, NONE).
+     *
+     * @param type Payload type
+     * @return Size in bytes, or 0 for variable-length
+     */
     inline uint16_t getPayloadTypeSize(PayloadType type)
     {
         switch (type)
@@ -171,11 +229,27 @@ namespace limp
         }
     }
 
-    // Convert enums to strings for debugging
+    /**
+     * @name Enum to String Converters
+     * Convert enum values to human-readable strings for debugging and logging.
+     * @{
+     */
+
+    /** @brief Convert MsgType to string */
     const char *toString(MsgType type);
+
+    /** @brief Convert PayloadType to string */
     const char *toString(PayloadType type);
+
+    /** @brief Convert ErrorCode to string */
     const char *toString(ErrorCode code);
+
+    /** @brief Convert Quality to string */
     const char *toString(Quality quality);
+
+    /** @brief Convert Severity to string */
     const char *toString(Severity severity);
+
+    /** @} */
 
 } // namespace limp
