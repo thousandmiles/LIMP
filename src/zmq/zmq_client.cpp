@@ -1,4 +1,5 @@
 #include "limp/zmq/zmq_client.hpp"
+#include <cstring>
 
 namespace limp
 {

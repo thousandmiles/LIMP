@@ -110,15 +110,8 @@ endif()
 
 # Link ZeroMQ if enabled
 if(LIMP_BUILD_ZMQ)
-    find_package(cppzmq REQUIRED)
-    # cppzmq brings in libzmq, which needs libsodium
-    # We need to make these dependencies available to consumers of limp
-    target_link_libraries(limp PUBLIC cppzmq)
-    
-    # When building as static library, we need to ensure libsodium is available
-    # Find the libsodium library path from Conan
-    find_library(SODIUM_LIB sodium REQUIRED)
-    target_link_libraries(limp PUBLIC ${SODIUM_LIB})
+    # Link against Conan-provided targets
+    target_link_libraries(limp PUBLIC cppzmq libsodium::libsodium)
 endif()
 
 # Examples

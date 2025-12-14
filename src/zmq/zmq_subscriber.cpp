@@ -1,4 +1,5 @@
 #include "limp/zmq/zmq_subscriber.hpp"
+#include <cstring>
 #include <vector>
 
 namespace limp
@@ -80,7 +81,7 @@ namespace limp
     {
         (void)timeoutMs; // Timeout is set via socket options
         std::vector<uint8_t> buffer(2048);
-        ssize_t received = receive(buffer.data(), buffer.size());
+        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
         if (received <= 0)
         {
             return false;
