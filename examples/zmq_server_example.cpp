@@ -65,15 +65,8 @@ int main()
     while (running)
     {
         // Receive request
-        uint8_t requestBuffer[1024];
-        std::ptrdiff_t received = server.receive(requestBuffer, sizeof(requestBuffer));
-
-        if (received < 0)
-        {
-            std::cerr << "Receive error" << std::endl;
-            continue;
-        }
-        else if (received == 0)
+        Frame requestFrame;
+        if (!server.receive(requestFrame))
         {
             // Timeout - check if we should continue
             continue;
@@ -81,30 +74,7 @@ int main()
 
         requestCount++;
         std::cout << "--- Request " << requestCount << " ---" << std::endl;
-        std::cout << "Received request (" << received << " bytes)" << std::endl;
-
-        // Deserialize request
-        Frame requestFrame;
-        if (!deserializeFrame(std::vector<uint8_t>(requestBuffer, requestBuffer + received), requestFrame))
-        {
-            std::cerr << "Failed to deserialize request" << std::endl;
-
-            // Send error response
-            auto errorBuilder = MessageBuilder::error(
-                0x0030,
-                0x3000,
-                0,
-                0,
-                ErrorCode::BadPayload);
-            Frame errorFrame = errorBuilder.build();
-
-            std::vector<uint8_t> errorData;
-            if (serializeFrame(errorFrame, errorData))
-            {
-                server.send(errorData.data(), errorData.size());
-            }
-            continue;
-        }
+        std::cout << "Received request (" << requestFrame.totalSize() << " bytes)" << std::endl;
 
         // Display request information
         std::cout << "Request Type: " << toString(requestFrame.msgType) << std::endl;
@@ -135,17 +105,9 @@ int main()
         responseBuilder.setPayload(static_cast<uint32_t>(requestCount));
         Frame responseFrame = responseBuilder.build();
 
-        // Serialize and send response
-        std::vector<uint8_t> responseData;
-        if (!serializeFrame(responseFrame, responseData))
-        {
-            std::cerr << "Failed to serialize response" << std::endl;
-            continue;
-        }
+        std::cout << "Sending response (" << responseFrame.totalSize() << " bytes)..." << std::endl;
 
-        std::cout << "Sending response (" << responseData.size() << " bytes)..." << std::endl;
-
-        if (!server.send(responseData.data(), responseData.size()))
+        if (!server.send(responseFrame))
         {
             std::cerr << "Failed to send response" << std::endl;
             continue;

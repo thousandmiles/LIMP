@@ -44,28 +44,16 @@ namespace limp
         bool bind(const std::string &endpoint);
 
         /**
-         * @brief Publish a message without topic
+         * @brief Publish a LIMP frame with topic
          *
-         * Sends a message to all subscribers.
-         *
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
-         */
-        bool send(const uint8_t *data, size_t size);
-
-        /**
-         * @brief Publish a message with topic
-         *
-         * Sends a message with a topic prefix. Subscribers can filter
+         * Sends a Frame with a topic prefix. Subscribers can filter
          * messages by subscribing to specific topics.
          *
          * @param topic Topic string for filtering
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
+         * @param frame Frame to send
          * @return true on success, false on failure
          */
-        bool publish(const std::string &topic, const uint8_t *data, size_t size);
+        bool publish(const std::string &topic, const Frame &frame);
 
         /**
          * @brief Send a LIMP frame
@@ -83,14 +71,16 @@ namespace limp
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
+    private:
         /**
-         * @brief Not supported for publisher
-         *
-         * Publishers do not receive data.
-         *
-         * @return Always -1
+         * @brief Internal helper to send raw data
          */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+        bool send(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Internal helper to publish raw data with topic
+         */
+        bool publish(const std::string &topic, const uint8_t *data, size_t size);
     };
 
 } // namespace limp

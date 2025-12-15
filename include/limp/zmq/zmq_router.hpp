@@ -84,60 +84,49 @@ namespace limp
         bool bind(const std::string &endpoint);
 
         /**
-         * @brief Receive a message with client identity
+         * @brief Receive a LIMP frame from client
          *
-         * Receives a multipart message from a DEALER client. The first
-         * frame contains the client's identity, followed by the data.
+         * Receives and deserializes a LIMP frame along with the sender's identity.
+         * Use this when clients send messages without destination (dealer.send()).
          *
-         * @param identity Output vector to store client identity
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received (data only), 0 on timeout, -1 on error
-         */
-        std::ptrdiff_t receive(std::vector<uint8_t> &identity,
-                               uint8_t *buffer,
-                               size_t maxSize);
-
-        /**
-         * @brief Receive a LIMP frame with client identity
-         *
-         * Receives and deserializes a LIMP frame along with the client identity.
-         *
-         * @param identity Output vector to store client identity
-         * @param frame Output frame
+         * @param sourceIdentity Output: sender's identity
+         * @param frame Output: received frame
          * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
          * @return true on success, false on timeout or error
          */
-        bool receive(std::vector<uint8_t> &identity,
+        bool receive(std::string &sourceIdentity,
                      Frame &frame,
                      int timeoutMs = -1);
 
         /**
-         * @brief Send data to a specific client
+         * @brief Receive a LIMP frame with source and destination identities
          *
-         * Sends a message to the client identified by the given identity.
-         * The identity should be obtained from a previous receive() call.
+         * Receives and deserializes a LIMP frame, extracting both the sender's
+         * identity and the intended destination identity. Use this when clients
+         * send messages with destination (dealer.sendTo(dest, frame)).
          *
-         * @param identity Client identity to send to
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @param sourceIdentity Output: sender's identity
+         * @param destinationIdentity Output: intended recipient's identity (empty if not specified)
+         * @param frame Output: received frame
+         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @return true on success, false on timeout or error
          */
-        bool send(const std::vector<uint8_t> &identity,
-                  const uint8_t *data,
-                  size_t size);
+        bool receive(std::string &sourceIdentity,
+                     std::string &destinationIdentity,
+                     Frame &frame,
+                     int timeoutMs = -1);
 
         /**
          * @brief Send a LIMP frame to a specific client
          *
-         * Serializes and sends a LIMP frame to the specified client.
+         * Serializes and sends a LIMP frame to the client with the specified identity.
+         * The identity should be obtained from a previous receive() call.
          *
-         * @param identity Client identity to send to
+         * @param clientIdentity Client identity to send to
          * @param frame Frame to send
          * @return true on success, false on failure
          */
-        bool send(const std::vector<uint8_t> &identity,
-                  const Frame &frame);
+        bool send(const std::string &clientIdentity, const Frame &frame);
 
         /**
          * @brief Not supported for router (use identity-based send)
@@ -150,6 +139,29 @@ namespace limp
          * @return false
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
+
+    private:
+        /**
+         * @brief Internal helper to receive raw multipart message
+         */
+        std::ptrdiff_t receiveRaw(std::vector<uint8_t> &identity,
+                                  uint8_t *buffer,
+                                  size_t maxSize);
+
+        /**
+         * @brief Internal helper to receive raw data for 5-frame routing messages
+         */
+        std::ptrdiff_t receiveRaw(std::vector<uint8_t> &sourceIdentity,
+                                  std::vector<uint8_t> &destinationIdentity,
+                                  uint8_t *buffer,
+                                  size_t maxSize);
+
+        /**
+         * @brief Internal helper to send raw data to client
+         */
+        bool sendRaw(const std::vector<uint8_t> &identity,
+                     const uint8_t *data,
+                     size_t size);
     };
 
 } // namespace limp

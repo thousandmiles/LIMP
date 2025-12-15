@@ -31,9 +31,9 @@ namespace limp
         }
     }
 
-    std::ptrdiff_t ZMQRouter::receive(std::vector<uint8_t> &identity,
-                                      uint8_t *buffer,
-                                      size_t maxSize)
+    std::ptrdiff_t ZMQRouter::receiveRaw(std::vector<uint8_t> &identity,
+                                         uint8_t *buffer,
+                                         size_t maxSize)
     {
         if (!isConnected())
         {
@@ -89,27 +89,134 @@ namespace limp
         }
     }
 
-    bool ZMQRouter::receive(std::vector<uint8_t> &identity,
+    bool ZMQRouter::receive(std::string &sourceIdentity,
                             Frame &frame,
                             int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
 
-        std::vector<uint8_t> buffer(4096); // Reasonable default size
-        std::ptrdiff_t received = receive(identity, buffer.data(), buffer.size());
+        std::vector<uint8_t> identityVec;
+        std::vector<uint8_t> buffer(4096);
+        std::ptrdiff_t received = receiveRaw(identityVec, buffer.data(), buffer.size());
 
         if (received <= 0)
         {
             return false;
         }
 
+        // Convert identity to string
+        sourceIdentity = std::string(identityVec.begin(), identityVec.end());
+
         buffer.resize(static_cast<size_t>(received));
         return deserializeFrame(buffer, frame);
     }
 
-    bool ZMQRouter::send(const std::vector<uint8_t> &identity,
-                         const uint8_t *data,
-                         size_t size)
+    std::ptrdiff_t ZMQRouter::receiveRaw(std::vector<uint8_t> &sourceIdentity,
+                                         std::vector<uint8_t> &destinationIdentity,
+                                         uint8_t *buffer,
+                                         size_t maxSize)
+    {
+        if (!isConnected())
+        {
+            return -1;
+        }
+
+        try
+        {
+            // Receive source identity frame (ROUTER adds this automatically)
+            zmq::message_t srcIdentityMsg;
+            auto result1 = socket_->recv(srcIdentityMsg, zmq::recv_flags::none);
+            if (!result1 || !srcIdentityMsg.more())
+            {
+                return 0; // Timeout or incomplete message
+            }
+            sourceIdentity.assign(static_cast<uint8_t *>(srcIdentityMsg.data()),
+                                 static_cast<uint8_t *>(srcIdentityMsg.data()) + srcIdentityMsg.size());
+
+            // Receive first delimiter
+            zmq::message_t delimiter1Msg;
+            auto result2 = socket_->recv(delimiter1Msg, zmq::recv_flags::none);
+            if (!result2 || !delimiter1Msg.more())
+            {
+                handleError(zmq::error_t(), "router receive: missing first delimiter");
+                return -1;
+            }
+
+            // Receive destination identity
+            zmq::message_t destIdentityMsg;
+            auto result3 = socket_->recv(destIdentityMsg, zmq::recv_flags::none);
+            if (!result3 || !destIdentityMsg.more())
+            {
+                handleError(zmq::error_t(), "router receive: missing destination identity");
+                return -1;
+            }
+            destinationIdentity.assign(static_cast<uint8_t *>(destIdentityMsg.data()),
+                                      static_cast<uint8_t *>(destIdentityMsg.data()) + destIdentityMsg.size());
+
+            // Receive second delimiter
+            zmq::message_t delimiter2Msg;
+            auto result4 = socket_->recv(delimiter2Msg, zmq::recv_flags::none);
+            if (!result4 || !delimiter2Msg.more())
+            {
+                handleError(zmq::error_t(), "router receive: missing second delimiter");
+                return -1;
+            }
+
+            // Receive data frame
+            zmq::message_t dataMsg;
+            auto result5 = socket_->recv(dataMsg, zmq::recv_flags::none);
+            if (!result5)
+            {
+                handleError(zmq::error_t(), "router receive: missing data frame");
+                return -1;
+            }
+
+            size_t receivedSize = dataMsg.size();
+            if (receivedSize > maxSize)
+            {
+                handleError(zmq::error_t(), "received message larger than buffer");
+                return -1;
+            }
+
+            std::memcpy(buffer, dataMsg.data(), receivedSize);
+            return static_cast<std::ptrdiff_t>(receivedSize);
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "router receive");
+            return -1;
+        }
+    }
+
+    bool ZMQRouter::receive(std::string &sourceIdentity,
+                            std::string &destinationIdentity,
+                            Frame &frame,
+                            int timeoutMs)
+    {
+        (void)timeoutMs; // Timeout is set via socket options
+
+        std::vector<uint8_t> srcIdentityVec;
+        std::vector<uint8_t> destIdentityVec;
+        std::vector<uint8_t> buffer(4096);
+        
+        std::ptrdiff_t received = receiveRaw(srcIdentityVec, destIdentityVec, buffer.data(), buffer.size());
+
+        if (received <= 0)
+        {
+            return false;
+        }
+
+        // Convert identities to strings
+        sourceIdentity = std::string(srcIdentityVec.begin(), srcIdentityVec.end());
+        destinationIdentity = std::string(destIdentityVec.begin(), destIdentityVec.end());
+
+        buffer.resize(static_cast<size_t>(received));
+        return deserializeFrame(buffer, frame);
+    }
+
+    bool ZMQRouter::sendRaw(const std::vector<uint8_t> &identity,
+                            const uint8_t *data,
+                            size_t size)
     {
         if (!isConnected())
         {
@@ -146,15 +253,17 @@ namespace limp
         }
     }
 
-    bool ZMQRouter::send(const std::vector<uint8_t> &identity,
-                         const Frame &frame)
+    bool ZMQRouter::send(const std::string &clientIdentity, const Frame &frame)
     {
         std::vector<uint8_t> buffer;
         if (!serializeFrame(frame, buffer))
         {
             return false;
         }
-        return send(identity, buffer.data(), buffer.size());
+
+        // Convert string identity to vector<uint8_t>
+        std::vector<uint8_t> identityVec(clientIdentity.begin(), clientIdentity.end());
+        return sendRaw(identityVec, buffer.data(), buffer.size());
     }
 
     bool ZMQRouter::send(const Frame &frame)

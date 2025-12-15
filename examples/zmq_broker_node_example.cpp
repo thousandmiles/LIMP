@@ -2,12 +2,18 @@
  * @file zmq_broker_node_example.cpp
  * @brief Example showing multiple nodes communicating through a central broker
  *
- * This example demonstrates a complete system with a central broker and
- * multiple nodes (HMI, PLC, Logger) communicating through it.
+ * This example demonstrates node-to-node communication through a ROUTER-ROUTER
+ * proxy broker. Messages are routed by destination identity.
  *
- * Run this alongside zmq_proxy_example.cpp to see the full system in action:
- * 1. Terminal 1: Run zmq_proxy_example (the broker)
- * 2. Terminal 2+: Run this program multiple times with different NODE_TYPE
+ * Message Flow:
+ *   HMI-001 --[sendTo("PLC-001", msg)]--> Broker --[forward]--> PLC-001
+ *   PLC-001 --[sendTo("HMI-001", reply)]--> Broker --[forward]--> HMI-001
+ *
+ * Run this alongside zmq_proxy_example.cpp:
+ * 1. Terminal 1: ./zmq_proxy_example (starts the broker)
+ * 2. Terminal 2: NODE_TYPE=PLC ./zmq_broker_node_example (PLC node)
+ * 3. Terminal 3: NODE_TYPE=HMI ./zmq_broker_node_example (HMI node)
+ * 4. Terminal 4: NODE_TYPE=LOGGER ./zmq_broker_node_example (Logger node)
  */
 
 #include "limp/limp.hpp"
@@ -116,22 +122,28 @@ int main()
         // Different behavior based on node type
         if (nodeType == "HMI")
         {
-            // HMI sends commands to PLC
+            // HMI sends commands to PLC through broker
             sentCount++;
-            std::cout << "[HMI] Sending command #" << sentCount << " to PLC..." << std::endl;
+            std::cout << "[HMI] Sending command #" << sentCount << " to PLC-001..." << std::endl;
 
             Frame cmd = MessageBuilder::request(0x0010, 0x2000, 0x0001, 0x0001).build();
 
-            dealer.send(cmd);
+            // Send to specific destination node through broker
+            dealer.sendTo("PLC-001", cmd);
 
-            // Try to receive response
+            // Try to receive response from PLC
+            std::string sourceIdentity;
             Frame response;
-            if (dealer.receive(response, 3000))
+            if (dealer.receiveFrom(sourceIdentity, response, 3000))
             {
                 receivedCount++;
                 MessageParser parser(response);
-                std::cout << "[HMI] Received response from broker (source: 0x"
-                          << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
+                std::cout << "[HMI] Received response from " << sourceIdentity 
+                          << " (node: 0x" << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
+            }
+            else
+            {
+                std::cout << "[HMI] No response received (timeout)" << std::endl;
             }
 
             std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -141,35 +153,38 @@ int main()
             // PLC waits for commands and responds
             std::cout << "[PLC] Waiting for commands..." << std::endl;
 
+            std::string sourceIdentity;
             Frame request;
-            if (dealer.receive(request, 5000))
+            if (dealer.receiveFrom(sourceIdentity, request, 5000))
             {
                 receivedCount++;
                 MessageParser parser(request);
-                std::cout << "[PLC] Received command from broker (source: 0x"
-                          << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
+                std::cout << "[PLC] Received command from " << sourceIdentity
+                          << " (node: 0x" << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
 
-                // Send response back
+                // Send response back to the sender through broker
                 sentCount++;
                 Frame response = MessageBuilder::response(0x0030, parser.classID(), 
                                                          parser.instanceID(), 
                                                          parser.attrID()).build();
 
-                dealer.send(response);
-                std::cout << "[PLC] Response sent back through broker" << std::endl;
+                dealer.sendTo(sourceIdentity, response);
+                std::cout << "[PLC] Response sent back to " << sourceIdentity << std::endl;
             }
         }
         else if (nodeType == "LOGGER")
         {
-            // Logger just listens to all traffic (in real scenario, would need multicast)
+            // Logger receives messages routed to it (or broadcast messages)
             std::cout << "[LOGGER] Monitoring messages..." << std::endl;
 
+            std::string sourceIdentity;
             Frame frame;
-            if (dealer.receive(frame, 5000))
+            if (dealer.receiveFrom(sourceIdentity, frame, 5000))
             {
                 receivedCount++;
                 MessageParser parser(frame);
-                std::cout << "[LOGGER] Message: src=0x" << std::hex << parser.srcNode()
+                std::cout << "[LOGGER] Message from " << sourceIdentity 
+                          << ": node=0x" << std::hex << parser.srcNode()
                           << " type=0x" << static_cast<int>(parser.msgType())
                           << std::dec << std::endl;
             }

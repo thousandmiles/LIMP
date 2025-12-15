@@ -54,18 +54,6 @@ namespace limp
         bool send(const Frame &frame) override;
 
         /**
-         * @brief Send data to the connected server
-         *
-         * Sends a request to the server. Must be followed by a receive()
-         * call before sending again.
-         *
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
-         */
-        bool send(const uint8_t *data, size_t size);
-
-        /**
          * @brief Receive a LIMP frame
          *
          * Receives and deserializes a LIMP frame.
@@ -76,15 +64,14 @@ namespace limp
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
+    private:
         /**
-         * @brief Receive response from server
-         *
-         * Blocks until response is received or timeout occurs.
-         * Must be called after each send().
-         *
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received, 0 on timeout, -1 on error
+         * @brief Internal helper to send raw data
+         */
+        bool send(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Internal helper to receive raw data
          */
         std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };

@@ -63,46 +63,23 @@ int main()
 
         std::cout << "Sending request (" << requestFrame.totalSize() << " bytes)..." << std::endl;
 
-        // Serialize and send
-        std::vector<uint8_t> requestData;
-        if (!serializeFrame(requestFrame, requestData))
-        {
-            std::cerr << "Failed to serialize request" << std::endl;
-            continue;
-        }
-
-        if (!client.send(requestData.data(), requestData.size()))
+        if (!client.send(requestFrame))
         {
             std::cerr << "Failed to send request" << std::endl;
             continue;
         }
 
         // Receive response
-        uint8_t responseBuffer[1024];
+        Frame responseFrame;
         std::cout << "Waiting for response..." << std::endl;
 
-        std::ptrdiff_t received = client.receive(responseBuffer, sizeof(responseBuffer));
-
-        if (received < 0)
+        if (!client.receive(responseFrame))
         {
             std::cerr << "Failed to receive response" << std::endl;
             continue;
         }
-        else if (received == 0)
-        {
-            std::cerr << "Receive timeout" << std::endl;
-            continue;
-        }
 
-        std::cout << "Received response (" << received << " bytes)" << std::endl;
-
-        // Deserialize and parse response
-        Frame responseFrame;
-        if (!deserializeFrame(std::vector<uint8_t>(responseBuffer, responseBuffer + received), responseFrame))
-        {
-            std::cerr << "Failed to deserialize response" << std::endl;
-            continue;
-        }
+        std::cout << "Received response (" << responseFrame.totalSize() << " bytes)" << std::endl;
 
         // Display response information
         MessageParser parser(responseFrame);

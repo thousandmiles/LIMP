@@ -29,4 +29,10 @@ if(LIMP_BUILD_ZMQ)
 
     add_executable(zmq_broker_node_example zmq_broker_node_example.cpp)
     target_link_libraries(zmq_broker_node_example PRIVATE limp cppzmq)
+
+    add_executable(central_server_router central_server_router.cpp)
+    target_link_libraries(central_server_router PRIVATE limp cppzmq)
+
+    add_executable(central_server_proxy central_server_proxy.cpp)
+    target_link_libraries(central_server_proxy PRIVATE limp cppzmq)
 endif()

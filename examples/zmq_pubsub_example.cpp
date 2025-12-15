@@ -66,12 +66,8 @@ void publisherThread()
             tempBuilder.setPayload(23.5f + (eventCount % 10));
             Frame tempFrame = tempBuilder.build();
 
-            std::vector<uint8_t> tempData;
-            if (serializeFrame(tempFrame, tempData))
-            {
-                publisher.publish("temperature", tempData.data(), tempData.size());
-                std::cout << "[Publisher] Published temperature event #" << eventCount << std::endl;
-            }
+            publisher.publish("temperature", tempFrame);
+            std::cout << "[Publisher] Published temperature event #" << eventCount << std::endl;
         }
         else
         {
@@ -85,12 +81,8 @@ void publisherThread()
             pressureBuilder.setPayload(101.3f + (eventCount % 5));
             Frame pressureFrame = pressureBuilder.build();
 
-            std::vector<uint8_t> pressureData;
-            if (serializeFrame(pressureFrame, pressureData))
-            {
-                publisher.publish("pressure", pressureData.data(), pressureData.size());
-                std::cout << "[Publisher] Published pressure event #" << eventCount << std::endl;
-            }
+            publisher.publish("pressure", pressureFrame);
+            std::cout << "[Publisher] Published pressure event #" << eventCount << std::endl;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -140,15 +132,8 @@ void subscriberThread(const std::string &topic)
 
     while (running && eventCount < 10)
     {
-        uint8_t buffer[1024];
-        std::ptrdiff_t received = subscriber.receive(buffer, sizeof(buffer));
-
-        if (received < 0)
-        {
-            std::cerr << "[Subscriber " << topic << "] Receive error" << std::endl;
-            continue;
-        }
-        else if (received == 0)
+        Frame eventFrame;
+        if (!subscriber.receive(eventFrame))
         {
             // Timeout - continue
             continue;
@@ -156,27 +141,15 @@ void subscriberThread(const std::string &topic)
 
         eventCount++;
 
-        // The received data includes the topic prefix
-        // Find where the LIMP frame starts (after the topic)
-        size_t topicLen = topic.length();
-        if (static_cast<size_t>(received) > topicLen)
+        // Parse the event
+        MessageParser parser(eventFrame);
+        auto value = parser.getValue();
+
+        if (std::holds_alternative<float>(value))
         {
-            // Deserialize LIMP message (skip topic prefix)
-            std::vector<uint8_t> frameData(buffer + topicLen, buffer + received);
-            Frame eventFrame;
-
-            if (deserializeFrame(frameData, eventFrame))
-            {
-                MessageParser parser(eventFrame);
-                auto value = parser.getValue();
-
-                if (std::holds_alternative<float>(value))
-                {
-                    float floatValue = std::get<float>(value);
-                    std::cout << "[Subscriber " << topic << "] Received event #" << eventCount
-                              << ", value: " << floatValue << std::endl;
-                }
-            }
+            float floatValue = std::get<float>(value);
+            std::cout << "[Subscriber " << topic << "] Received event #" << eventCount
+                      << ", value: " << floatValue << std::endl;
         }
     }
 

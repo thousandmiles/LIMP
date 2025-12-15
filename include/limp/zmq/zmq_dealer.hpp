@@ -100,18 +100,7 @@ namespace limp
         bool connect(const std::string &endpoint);
 
         /**
-         * @brief Send data to the connected router
-         *
-         * Sends a message to the router. Does not require prior receive
-         * or subsequent receive (asynchronous operation).
-         *
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
-         */
-        bool send(const uint8_t *data, size_t size);
 
-        /**
          * @brief Send a LIMP frame
          *
          * Serializes and sends a LIMP frame via DEALER socket.
@@ -122,16 +111,17 @@ namespace limp
         bool send(const Frame &frame) override;
 
         /**
-         * @brief Receive data from router
+         * @brief Send a LIMP frame to a specific destination node
          *
-         * Blocks until a message is received or timeout occurs.
-         * Can be called at any time (no prior send required).
+         * Sends a message with destination identity for routing through
+         * a ROUTER-ROUTER proxy. The proxy will forward the message to
+         * the node with the specified identity.
          *
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received, 0 on timeout, -1 on error
+         * @param destinationIdentity Target node's identity (e.g., "PLC-001")
+         * @param frame Frame to send
+         * @return true on success, false on failure
          */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+        bool sendTo(const std::string &destinationIdentity, const Frame &frame);
 
         /**
          * @brief Receive a LIMP frame
@@ -145,6 +135,19 @@ namespace limp
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
+         * @brief Receive a LIMP frame with source identity
+         *
+         * Receives a message routed through a ROUTER-ROUTER proxy, extracting
+         * both the source node's identity and the message frame.
+         *
+         * @param sourceIdentity Output: sender's identity (e.g., "HMI-001")
+         * @param frame Output frame
+         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @return true on success, false on timeout or error
+         */
+        bool receiveFrom(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
+
+        /**
          * @brief Get the current identity
          *
          * @return The identity string, or empty if using auto-generated identity
@@ -153,6 +156,30 @@ namespace limp
 
     private:
         std::string identity_; ///< Socket identity
+
+        /**
+         * @brief Internal helper to send raw data
+         */
+        bool send(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Internal helper to receive raw data
+         */
+        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+
+        /**
+         * @brief Internal helper to receive raw data with source identity
+         */
+        std::ptrdiff_t receiveFrom(std::string &sourceIdentity,
+                                   uint8_t *buffer,
+                                   size_t maxSize);
+
+        /**
+         * @brief Internal helper to send raw data with routing
+         */
+        bool sendTo(const std::string &destinationIdentity,
+                    const uint8_t *data,
+                    size_t size);
     };
 
 } // namespace limp

@@ -90,14 +90,6 @@ namespace limp
         return deserializeFrame(buffer, frame);
     }
 
-    bool ZMQSubscriber::send(const uint8_t *data, size_t size)
-    {
-        // Subscribers don't send
-        (void)data;
-        (void)size;
-        return false;
-    }
-
     std::ptrdiff_t ZMQSubscriber::receive(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())

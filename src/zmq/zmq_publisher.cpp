@@ -77,20 +77,21 @@ namespace limp
         return send(buffer.data(), buffer.size());
     }
 
-    bool ZMQPublisher::receive(Frame &frame, int timeoutMs)
+    bool ZMQPublisher::publish(const std::string &topic, const Frame &frame)
     {
-        // Publishers don't receive
-        (void)frame;
-        (void)timeoutMs;
-        return false;
+        std::vector<uint8_t> buffer;
+        if (!serializeFrame(frame, buffer))
+        {
+            return false;
+        }
+        return publish(topic, buffer.data(), buffer.size());
     }
 
-    std::ptrdiff_t ZMQPublisher::receive(uint8_t *buffer, size_t maxSize)
+    bool ZMQPublisher::receive(Frame &frame, int timeoutMs)
     {
-        // Publishers don't receive
-        (void)buffer;
-        (void)maxSize;
-        return -1;
+        (void)frame;
+        (void)timeoutMs;
+        return false; // Publishers don't receive
     }
 
 } // namespace limp

@@ -123,12 +123,132 @@ namespace limp
         return send(buffer.data(), buffer.size());
     }
 
+    bool ZMQDealer::sendTo(const std::string &destinationIdentity,
+                           const uint8_t *data,
+                           size_t size)
+    {
+        if (!isConnected())
+        {
+            return false;
+        }
+
+        try
+        {
+            // Send multipart message: [destination_identity][empty delimiter][data]
+            // The empty delimiter is required by ZeroMQ ROUTER envelope protocol
+            zmq::message_t destMsg(destinationIdentity.data(), destinationIdentity.size());
+            zmq::message_t emptyMsg;
+            zmq::message_t dataMsg(data, size);
+
+            if (!socket_->send(destMsg, zmq::send_flags::sndmore))
+            {
+                return false;
+            }
+            if (!socket_->send(emptyMsg, zmq::send_flags::sndmore))
+            {
+                return false;
+            }
+            auto result = socket_->send(dataMsg, zmq::send_flags::none);
+            return result.has_value();
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "dealer sendTo");
+            return false;
+        }
+    }
+
+    bool ZMQDealer::sendTo(const std::string &destinationIdentity, const Frame &frame)
+    {
+        std::vector<uint8_t> buffer;
+        if (!serializeFrame(frame, buffer))
+        {
+            return false;
+        }
+        return sendTo(destinationIdentity, buffer.data(), buffer.size());
+    }
+
     bool ZMQDealer::receive(Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
 
         std::vector<uint8_t> buffer(4096); // Reasonable default size
         std::ptrdiff_t received = receive(buffer.data(), buffer.size());
+
+        if (received <= 0)
+        {
+            return false;
+        }
+
+        buffer.resize(static_cast<size_t>(received));
+        return deserializeFrame(buffer, frame);
+    }
+
+    std::ptrdiff_t ZMQDealer::receiveFrom(std::string &sourceIdentity,
+                                          uint8_t *buffer,
+                                          size_t maxSize)
+    {
+        if (!isConnected())
+        {
+            return -1;
+        }
+
+        try
+        {
+            // Receive multipart message: [source_identity][empty delimiter][data]
+            zmq::message_t srcMsg;
+            zmq::message_t emptyMsg;
+            zmq::message_t dataMsg;
+
+            // Receive source identity
+            auto result1 = socket_->recv(srcMsg, zmq::recv_flags::none);
+            if (!result1 || !srcMsg.more())
+            {
+                return 0; // Timeout or incomplete message
+            }
+
+            // Receive empty delimiter
+            auto result2 = socket_->recv(emptyMsg, zmq::recv_flags::none);
+            if (!result2 || !emptyMsg.more())
+            {
+                handleError(zmq::error_t(), "dealer receiveFrom: missing delimiter");
+                return -1;
+            }
+
+            // Receive data frame
+            auto result3 = socket_->recv(dataMsg, zmq::recv_flags::none);
+            if (!result3)
+            {
+                handleError(zmq::error_t(), "dealer receiveFrom: missing data frame");
+                return -1;
+            }
+
+            // Extract source identity
+            sourceIdentity = std::string(static_cast<char *>(srcMsg.data()), srcMsg.size());
+
+            size_t receivedSize = dataMsg.size();
+            if (receivedSize > maxSize)
+            {
+                handleError(zmq::error_t(), "received message larger than buffer");
+                return -1;
+            }
+
+            std::memcpy(buffer, dataMsg.data(), receivedSize);
+            return static_cast<std::ptrdiff_t>(receivedSize);
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "dealer receiveFrom");
+            return -1;
+        }
+    }
+
+    bool ZMQDealer::receiveFrom(std::string &sourceIdentity, Frame &frame, int timeoutMs)
+    {
+        (void)timeoutMs; // Timeout is set via socket options
+
+        std::vector<uint8_t> buffer(4096);
+        std::ptrdiff_t received = receiveFrom(sourceIdentity, buffer.data(), buffer.size());
 
         if (received <= 0)
         {

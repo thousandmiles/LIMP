@@ -65,7 +65,7 @@ namespace limp
         bool unsubscribe(const std::string &topic);
 
         /**
-         * @brief Not supported for subscriber (receive uses receiveWithTopic)
+         * @brief Not supported for subscriber (send-only operation)
          * @return false
          */
         bool send(const Frame &frame) override;
@@ -79,25 +79,9 @@ namespace limp
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
+    private:
         /**
-         * @brief Not supported for subscriber
-         *
-         * Subscribers do not send data.
-         *
-         * @return Always false
-         */
-        bool send(const uint8_t *data, size_t size);
-
-        /**
-         * @brief Receive a published message
-         *
-         * Blocks until a message matching subscribed topics is received
-         * or timeout occurs. If topic filtering is used, the topic prefix
-         * is included in the received data.
-         *
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received, 0 on timeout, -1 on error
+         * @brief Internal helper to receive raw data
          */
         std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };

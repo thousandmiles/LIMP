@@ -86,7 +86,7 @@ int main()
     while (running)
     {
         // Receive message with client identity
-        std::vector<uint8_t> clientIdentity;
+        std::string clientIdentity;
         Frame request;
 
         if (!router.receive(clientIdentity, request, 1000))
@@ -96,14 +96,13 @@ int main()
         }
 
         totalMessages++;
-        std::string identityStr = identityToString(clientIdentity);
 
         // Track client statistics
-        clientStats[identityStr]++;
+        clientStats[clientIdentity]++;
 
         std::cout << "----------------------------------------" << std::endl;
         std::cout << "Received message #" << totalMessages << std::endl;
-        std::cout << "Client Identity: " << identityStr << std::endl;
+        std::cout << "Client Identity: " << clientIdentity << std::endl;
 
         // Parse the LIMP message
         MessageParser parser(request);
@@ -130,7 +129,7 @@ int main()
         }
         else
         {
-            std::cout << "Response routed back to client: " << identityStr << std::endl;
+            std::cout << "Response routed back to client: " << clientIdentity << std::endl;
         }
 
         // Print statistics
