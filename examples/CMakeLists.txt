@@ -17,4 +17,16 @@ if(LIMP_BUILD_ZMQ)
 
     add_executable(zmq_pubsub_example zmq_pubsub_example.cpp)
     target_link_libraries(zmq_pubsub_example PRIVATE limp cppzmq)
+
+    add_executable(zmq_router_example zmq_router_example.cpp)
+    target_link_libraries(zmq_router_example PRIVATE limp cppzmq)
+
+    add_executable(zmq_dealer_example zmq_dealer_example.cpp)
+    target_link_libraries(zmq_dealer_example PRIVATE limp cppzmq)
+
+    add_executable(zmq_proxy_example zmq_proxy_example.cpp)
+    target_link_libraries(zmq_proxy_example PRIVATE limp cppzmq)
+
+    add_executable(zmq_broker_node_example zmq_broker_node_example.cpp)
+    target_link_libraries(zmq_broker_node_example PRIVATE limp cppzmq)
 endif()
