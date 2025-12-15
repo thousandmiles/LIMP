@@ -14,39 +14,33 @@ namespace limp
      * sockets. Unlike REQ sockets, DEALER does not enforce strict send-receive
      * alternation, allowing for more flexible messaging patterns.
      *
-     * ╔═══════════════════════════════════════════════════════════════════╗
-     * ║                    DEALER PATTERN DIAGRAM                         ║
-     * ╚═══════════════════════════════════════════════════════════════════╝
+     * DEALER PATTERN OVERVIEW:
      *
-     *          DEALER Client              ROUTER Server
-     *          ┌────────────┐              ┌────────────┐
-     *          │ connect()  │─────────────▶│   bind()   │
-     *          └────────────┘              └────────────┘
-     *                 │                           │
-     *          ┌──────▼──────┐              ┌─────▼──────┐
-     *          │   send()    │─────[data]──▶│  receive() │
-     *          │   send()    │─────[data]──▶│  (id+data) │
-     *          │   send()    │─────[data]──▶│            │
-     *          └─────────────┘              └────────────┘
-     *                 │                           │
-     *                 │    (async - no waiting)   │
-     *                 │                           │
-     *          ┌──────▼──────┐              ┌─────▼──────┐
-     *          │  receive()  │◀────[data]───│   send()   │
-     *          │  receive()  │◀────[data]───│ (to id)    │
-     *          └─────────────┘              └────────────┘
+     * Communication Flow:
+     *   1. DEALER connects to ROUTER server
+     *   2. DEALER can send multiple messages without waiting for replies
+     *   3. ROUTER receives messages with DEALER's identity attached
+     *   4. ROUTER can send responses at any time
+     *   5. DEALER receives responses asynchronously
      *
-     * ┌─────────────────────────────────────────────────────────────────┐
-     * │ vs REQ/REP Pattern:                                             │
-     * │                                                                 │
-     * │ REQ (Synchronous):        DEALER (Asynchronous):                │
-     * │   send() ────────┐          send() ────────┐                   │
-     * │   receive() ◀────┘          send() ────────┤                   │
-     * │   send() ────────┐          send() ────────┤                   │
-     * │   receive() ◀────┘          receive() ◀────┤                   │
-     * │   (strict order)            receive() ◀────┘                   │
-     * │                             (flexible order)                    │
-     * └─────────────────────────────────────────────────────────────────┘
+     * Asynchronous Behavior:
+     *   - DEALER can call send() multiple times in a row
+     *   - DEALER can call receive() multiple times in a row
+     *   - No enforced alternation between send and receive
+     *   - Messages can be queued on both sides
+     *
+     * Comparison with REQ/REP Pattern:
+     *
+     *   REQ (Synchronous - Strict Order):
+     *     - Must alternate: send() -> receive() -> send() -> receive()
+     *     - Cannot send twice without receiving in between
+     *     - Enforced state machine (send state vs receive state)
+     *
+     *   DEALER (Asynchronous - Flexible Order):
+     *     - Can send() multiple times before any receive()
+     *     - Can receive() multiple times without sending
+     *     - No state machine enforcement
+     *     - Full asynchronous operation
      *
      * Key features:
      * - Asynchronous send/receive (no strict alternation required)

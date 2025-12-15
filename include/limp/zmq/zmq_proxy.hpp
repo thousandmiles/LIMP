@@ -18,92 +18,50 @@ namespace limp
      * frontend and backend sockets. Runs in a separate thread and provides
      * common patterns like load balancing and message routing.
      *
-     * ╔═══════════════════════════════════════════════════════════════════╗
-     * ║                   PROXY PATTERNS COMPARISON                       ║
-     * ╚═══════════════════════════════════════════════════════════════════╝
+     * PROXY PATTERNS OVERVIEW:
      *
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ 1. ROUTER-DEALER: Load Balancer Pattern                        │
-     * └────────────────────────────────────────────────────────────────┘
+     * 1. ROUTER-DEALER (Load Balancer Pattern)
+     *    Purpose: Distribute client requests to available workers
+     *    Frontend: ROUTER socket (binds) - receives from multiple clients
+     *    Backend: DEALER socket (binds) - distributes to multiple workers
+     *    Flow: Client (REQ/DEALER) → ROUTER → DEALER → Worker (REP/DEALER)
+     *    Behavior: Load balances requests using LRU (Least Recently Used)
+     *    Use Case: Web server backends, job processing, task distribution
      *
-     *   Clients (REQ/DEALER)      PROXY             Workers (REP/DEALER)
-     *   ┌────────┐                                    ┌────────┐
-     *   │Client 1│──┐          ┌─────────┐         ┌─│Worker 1│
-     *   └────────┘  │          │ ROUTER  │         │ └────────┘
-     *   ┌────────┐  ├─────────▶│Frontend │         │ ┌────────┐
-     *   │Client 2│──┤          └─────────┘         ├─│Worker 2│
-     *   └────────┘  │               │              │ └────────┘
-     *   ┌────────┐  │          ┌────▼─────┐        │ ┌────────┐
-     *   │Client 3│──┘          │  DEALER  │        └─│Worker 3│
-     *   └────────┘             │ Backend  │──────────└────────┘
-     *                          └──────────┘
-     *   Use Case: Distribute client requests to available workers
-     *   Flow: Client → Router → Dealer → Worker (round-robin)
+     * 2. ROUTER-ROUTER (Message Broker Pattern)
+     *    Purpose: Central message broker for N:N node communication
+     *    Frontend: ROUTER socket (binds) - multiple nodes connect
+     *    Backend: ROUTER socket (binds) - more nodes connect (or same endpoint)
+     *    Flow: Any Node (DEALER) → ROUTER → ROUTER → Any Node (DEALER)
+     *    Behavior: Routes messages by client identity
+     *    Use Case: Industrial systems (HMI, SCADA, PLC communication)
+     *    Example Nodes: HMI, SCADA, Logger, PLC, Historian, Alarm systems
      *
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ 2. ROUTER-ROUTER: Message Broker Pattern                       │
-     * └────────────────────────────────────────────────────────────────┘
+     * 3. DEALER-DEALER (Pipeline Pattern)
+     *    Purpose: Asynchronous task distribution pipeline
+     *    Frontend: DEALER socket (binds) - producers connect
+     *    Backend: DEALER socket (binds) - consumers connect
+     *    Flow: Producer (DEALER) → DEALER → DEALER → Consumer (DEALER)
+     *    Behavior: Fair-queued distribution, fully asynchronous
+     *    Use Case: Task pipelines, data processing streams
      *
-     *     Nodes (DEALER)          PROXY              Nodes (DEALER)
-     *   ┌────────┐                                    ┌────────┐
-     *   │ HMI    │──┐          ┌─────────┐         ┌─│  PLC   │
-     *   └────────┘  │          │ ROUTER  │         │ └────────┘
-     *   ┌────────┐  ├─────────▶│Frontend │         │ ┌────────┐
-     *   │ SCADA  │──┤          └─────────┘         ├─│Historian│
-     *   └────────┘  │               │              │ └────────┘
-     *   ┌────────┐  │          ┌────▼─────┐        │ ┌────────┐
-     *   │ Logger │──┘          │ ROUTER   │        └─│ Alarm  │
-     *   └────────┘             │ Backend  │──────────└────────┘
-     *                          └──────────┘
-     *   Use Case: Central message broker for N:N communication
-     *   Flow: Any Node → Router → Router → Any Node (by identity)
+     * 4. XPUB-XSUB (Pub/Sub Forwarder Pattern)
+     *    Purpose: Centralized publish-subscribe message bus
+     *    Frontend: XSUB socket (binds) - publishers connect
+     *    Backend: XPUB socket (binds) - subscribers connect
+     *    Flow: Publisher (PUB) → XSUB → XPUB → Subscriber (SUB)
+     *    Behavior: Topic-based filtering and forwarding
+     *    Use Case: Event distribution, sensor data, alarm systems
+     *    Example: Sensors, Alarms, Events → Monitors, Loggers, Dashboards
      *
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ 3. DEALER-DEALER: Pipeline Pattern                             │
-     * └────────────────────────────────────────────────────────────────┘
+     * Pattern Comparison:
      *
-     *     Producers (DEALER)      PROXY              Consumers (DEALER)
-     *   ┌────────┐                                    ┌────────┐
-     *   │ Task 1 │──┐          ┌─────────┐         ┌─│Process1│
-     *   └────────┘  │          │ DEALER  │         │ └────────┘
-     *   ┌────────┐  ├─────────▶│Frontend │         │ ┌────────┐
-     *   │ Task 2 │──┤          └─────────┘         ├─│Process2│
-     *   └────────┘  │               │              │ └────────┘
-     *   ┌────────┐  │          ┌────▼─────┐        │ ┌────────┐
-     *   │ Task 3 │──┘          │ DEALER   │        └─│Process3│
-     *   └────────┘             │ Backend  │──────────└────────┘
-     *                          └──────────┘
-     *   Use Case: Async task distribution (fully asynchronous)
-     *   Flow: Producer → Dealer → Dealer → Consumer (fair-queued)
-     *
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ 4. XPUB-XSUB: Pub/Sub Forwarder Pattern                        │
-     * └────────────────────────────────────────────────────────────────┘
-     *
-     *   Publishers (PUB)         PROXY             Subscribers (SUB)
-     *   ┌────────┐                                    ┌────────┐
-     *   │ Sensor │──┐          ┌─────────┐         ┌─│Monitor │
-     *   └────────┘  │          │  XSUB   │         │ └────────┘
-     *   ┌────────┐  ├─────────▶│Frontend │         │ ┌────────┐
-     *   │ Alarm  │──┤          └─────────┘         ├─│ Logger │
-     *   └────────┘  │               │              │ └────────┘
-     *   ┌────────┐  │          ┌────▼─────┐        │ ┌────────┐
-     *   │ Event  │──┘          │  XPUB    │        └─│Dashboard│
-     *   └────────┘             │ Backend  │──────────└────────┘
-     *                          └──────────┘
-     *   Use Case: Centralized publish-subscribe message bus
-     *   Flow: Publisher → XSUB → XPUB → Subscribers (topic-based)
-     *
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ Pattern Comparison Table:                                      │
-     * ├────────────────┬──────────────┬──────────────┬────────────────┤
-     * │ Pattern        │ Use Case     │ Load Balance │ Routing        │
-     * ├────────────────┼──────────────┼──────────────┼────────────────┤
-     * │ ROUTER-DEALER  │ Request/Work │ Yes (LRU)    │ To available   │
-     * │ ROUTER-ROUTER  │ Message Broker│ No          │ By identity    │
-     * │ DEALER-DEALER  │ Pipeline     │ Yes (fair)   │ Fair-queued    │
-     * │ XPUB-XSUB      │ Pub/Sub Bus  │ No           │ By topic       │
-     * └────────────────┴──────────────┴──────────────┴────────────────┘
+     *   Pattern        | Use Case         | Load Balance | Routing
+     *   ----------------------------------------------------------------
+     *   ROUTER-DEALER  | Request/Work     | Yes (LRU)    | To available
+     *   ROUTER-ROUTER  | Message Broker   | No           | By identity
+     *   DEALER-DEALER  | Pipeline         | Yes (fair)   | Fair-queued
+     *   XPUB-XSUB      | Pub/Sub Bus      | No           | By topic
      *
      * Supported patterns:
      * - ROUTER-DEALER: Load balancer (clients to workers)

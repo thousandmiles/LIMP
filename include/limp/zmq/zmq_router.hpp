@@ -14,39 +14,29 @@ namespace limp
      * multiple DEALER clients. The ROUTER socket automatically tracks client
      * identities and allows selective message routing.
      *
-     * ╔═══════════════════════════════════════════════════════════════════╗
-     * ║                    ROUTER PATTERN DIAGRAM                         ║
-     * ╚═══════════════════════════════════════════════════════════════════╝
+     * ROUTER PATTERN OVERVIEW:
      *
-     *     DEALER Client 1          ROUTER Server          DEALER Client 2
-     *     (identity: A)                                    (identity: B)
-     *     ┌──────────┐                ┌──────────┐         ┌──────────┐
-     *     │  send()  │───[A][data]───▶│ receive()│         │          │
-     *     │          │                │ (gets A) │         │          │
-     *     └──────────┘                └──────────┘         └──────────┘
-     *                                       │
-     *                                 ┌─────▼──────┐
-     *                                 │ Process &  │
-     *                                 │  Route     │
-     *                                 └─────┬──────┘
-     *                                       │
-     *     ┌──────────┐                ┌─────▼──────┐         ┌──────────┐
-     *     │          │                │   send()   │         │          │
-     *     │          │                │ (to B)     │         │          │
-     *     └──────────┘                └──────────┘         └──────────┘
-     *     ┌──────────┐                      │               ┌──────────┐
-     *     │          │                [B][response]────────▶│ receive()│
-     *     │          │                                      │          │
-     *     └──────────┘                                      └──────────┘
+     * Communication Flow:
+     *   1. DEALER Client 1 (identity: A) sends message to ROUTER
+     *   2. ROUTER receives [identity A][delimiter][data]
+     *   3. ROUTER processes and determines routing
+     *   4. ROUTER sends response to specific client by identity
+     *   5. Client B receives the routed message
      *
-     * ┌─────────────────────────────────────────────────────────────────┐
-     * │ Key Characteristics:                                            │
-     * │ • ROUTER binds, DEALER connects                                 │
-     * │ • ROUTER tracks client identities automatically                 │
-     * │ • Can route messages to specific clients by identity            │
-     * │ • No send-receive order enforcement (fully asynchronous)        │
-     * │ • Supports N:1 communication (many clients to one server)       │
-     * └─────────────────────────────────────────────────────────────────┘
+     * Example Scenario:
+     *   - Client A sends request to ROUTER server
+     *   - ROUTER automatically captures client A's identity
+     *   - ROUTER processes request and decides to forward to Client B
+     *   - ROUTER sends [identity B][delimiter][response] to Client B
+     *   - Client B receives the response
+     *
+     * Key Characteristics:
+     *   - ROUTER binds (server), DEALER connects (client)
+     *   - ROUTER automatically tracks client identities
+     *   - Can route messages to specific clients by identity
+     *   - No send-receive order enforcement (fully asynchronous)
+     *   - Supports N:1 communication (many clients to one server)
+     *   - Each message includes identity frame for routing
      *
      * Key features:
      * - Receives messages with client identity frames
