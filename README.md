@@ -4,6 +4,8 @@ Modern C++17 library for industrial automation messaging (SCADA, HMI, PLC commun
 
 **Features:** Compact binary protocol (14-byte header + payload) | Builder pattern API | ZeroMQ transport | CRC16-MODBUS | Cross-platform
 
+**ZeroMQ Patterns:** Client/Server (REQ/REP) | Pub/Sub | Router/Dealer | Proxy (load balancing, message broker, forwarding)
+
 ## Linux Usage
 
 ### Download Pre-built Package
