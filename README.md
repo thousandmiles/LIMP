@@ -168,45 +168,7 @@ ctest -C Debug --output-on-failure
 
 ## API Examples
 
-**Core Protocol (Cross-platform):**
-
-```cpp
-#include <limp/limp.hpp>
-using namespace limp;
-
-// Build and serialize request
-auto request = MessageBuilder::request(0x10, 0x30, 0x3000, 7, 1)
-    .setPayload(123.45f).build();
-std::vector<uint8_t> buffer;
-serializeFrame(request, buffer);
-
-// Deserialize and parse response
-Frame response;
-deserializeFrame(buffer, response);
-auto value = MessageParser(response).getFloat32();
-```
-
-**ZeroMQ Transport (Cross-platform):**
-
-```cpp
-#include <limp/zmq/zmq.hpp>
-
-// Server
-ZMQServer server;
-server.bind("tcp://0.0.0.0:5555");
-Frame req;
-if (server.receive(req)) {
-    server.send(MessageBuilder::response(req.dstNodeID, req.srcNodeID,
-        req.classID, req.instanceID, req.attrID).setPayload("OK").build());
-}
-
-// Client
-ZMQClient client;
-client.connect("tcp://127.0.0.1:5555");
-client.send(MessageBuilder::request(0x10, 0x30, 0x3000, 1, 1).build());
-Frame resp;
-client.receive(resp);
-```
+[examples](./examples/)
 
 ## License
 
