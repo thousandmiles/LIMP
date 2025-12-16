@@ -72,6 +72,8 @@ jobs:
         shell: powershell
         run: |
           conan install . --output-folder=build/release --build=missing -s build_type=Release
+          Write-Host "=== Verifying Conan output structure ==="
+          Get-ChildItem -Path build/release -Recurse -Filter "conan_toolchain.cmake" | Select-Object FullName
 
       - name: Build package
         shell: powershell
