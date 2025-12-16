@@ -26,6 +26,6 @@ add_limp_example("04_router_dealer" "router" "04_router_dealer/router.cpp")
 add_limp_example("04_router_dealer" "dealer" "04_router_dealer/dealer.cpp")
 
 # 05 - Message Broker Patterns
-add_limp_example("05_broker" "proxy_broker" "05_broker/proxy_broker.cpp")
 add_limp_example("05_broker" "router_broker" "05_broker/router_broker.cpp")
 add_limp_example("05_broker" "broker_node" "05_broker/broker_node.cpp")
+add_limp_example("05_broker" "direct_routing" "05_broker/direct_routing.cpp")

@@ -9,11 +9,14 @@
  *   HMI-001 --[sendTo("PLC-001", msg)]--> Broker --[forward]--> PLC-001
  *   PLC-001 --[sendTo("HMI-001", reply)]--> Broker --[forward]--> HMI-001
  *
- * Run this alongside proxy_broker.cpp:
- * 1. Terminal 1: ./proxy_broker (starts the broker)
+ * Run this alongside router_broker.cpp (NOT proxy_broker):
+ * 1. Terminal 1: ./router_broker (starts the message broker)
  * 2. Terminal 2: NODE_TYPE=PLC ./broker_node (PLC node)
  * 3. Terminal 3: NODE_TYPE=HMI ./broker_node (HMI node)
  * 4. Terminal 4: NODE_TYPE=LOGGER ./broker_node (Logger node)
+ *
+ * Note: router_broker.cpp uses custom routing logic to deliver messages
+ * based on destination. proxy_broker.cpp does NOT support this pattern.
  */
 
 #include "limp/limp.hpp"
@@ -97,7 +100,11 @@ int main()
     dealer.setIdentity(identity);
 
     // Connect to broker
-    std::string brokerEndpoint = "tcp://127.0.0.1:5555";
+    // For ROUTER-ROUTER proxy message broker: all nodes connect to frontend
+    // The proxy doesn't route by destination in messages - it routes by socket
+    // For true message broker with destination routing, use router_broker.cpp instead
+    std::string brokerEndpoint = "tcp://127.0.0.1:5555";  // All connect to frontend
+    
     std::cout << "Connecting to broker at " << brokerEndpoint << "..." << std::endl;
 
     if (!dealer.connect(brokerEndpoint))
@@ -113,6 +120,13 @@ int main()
     // Give broker time to register
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
+    // Send initial registration message so broker knows about this node
+    // This is important for nodes that wait to receive (like PLC)
+    std::cout << "[" << nodeType << "] Registering with broker..." << std::endl;
+    Frame regMsg = MessageBuilder::event(nodeID, 0x0001, 0x0001, 0x0001).build();
+    dealer.send(regMsg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     int sentCount = 0;
     int receivedCount = 0;
 
@@ -122,69 +136,79 @@ int main()
         // Different behavior based on node type
         if (nodeType == "HMI")
         {
-            // HMI sends commands to PLC through broker
+            // HMI sends commands (router_broker echoes back responses)
             sentCount++;
-            std::cout << "[HMI] Sending command #" << sentCount << " to PLC-001..." << std::endl;
+            std::cout << "[HMI] Sending REQUEST #" << sentCount << "..." << std::endl;
 
-            Frame cmd = MessageBuilder::request(0x0010, 0x2000, 0x0001, 0x0001).build();
+            Frame cmd = MessageBuilder::request(nodeID, 0x2000, 0x0001, 0x0001).build();
 
-            // Send to specific destination node through broker
-            dealer.sendTo("PLC-001", cmd);
+            // Use regular send (router_broker handles routing)
+            dealer.send(cmd);
 
-            // Try to receive response from PLC
-            std::string sourceIdentity;
+            // Try to receive response
             Frame response;
-            if (dealer.receiveFrom(sourceIdentity, response, 3000))
+            if (dealer.receive(response, 3000))
             {
                 receivedCount++;
                 MessageParser parser(response);
-                std::cout << "[HMI] Received response from " << sourceIdentity 
-                          << " (node: 0x" << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
+                std::cout << "[HMI] Received RESPONSE #" << receivedCount
+                          << " (from node: 0x" << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
             }
             else
             {
                 std::cout << "[HMI] No response received (timeout)" << std::endl;
             }
 
+            // Also send an EVENT periodically (every other loop)
+            if (sentCount % 2 == 0)
+            {
+                std::cout << "[HMI] Sending EVENT (user action logged)..." << std::endl;
+                Frame event = MessageBuilder::event(nodeID, 0x1000, 0x0001, 0x0001).build();
+                dealer.send(event);
+            }
+
             std::this_thread::sleep_for(std::chrono::seconds(3));
         }
         else if (nodeType == "PLC")
         {
-            // PLC waits for commands and responds
-            std::cout << "[PLC] Waiting for commands..." << std::endl;
+            // PLC waits for commands and responds (router_broker handles this)
+            std::cout << "[PLC] Waiting for requests..." << std::endl;
 
-            std::string sourceIdentity;
             Frame request;
-            if (dealer.receiveFrom(sourceIdentity, request, 5000))
+            if (dealer.receive(request, 5000))
             {
                 receivedCount++;
                 MessageParser parser(request);
-                std::cout << "[PLC] Received command from " << sourceIdentity
-                          << " (node: 0x" << std::hex << parser.srcNode() << std::dec << ")" << std::endl;
+                std::cout << "[PLC] Received REQUEST from node 0x" << std::hex 
+                          << parser.srcNode() << std::dec << std::endl;
 
-                // Send response back to the sender through broker
+                // Send response (router_broker routes back to sender)
                 sentCount++;
-                Frame response = MessageBuilder::response(0x0030, parser.classID(), 
+                Frame response = MessageBuilder::response(nodeID, parser.classID(), 
                                                          parser.instanceID(), 
                                                          parser.attrID()).build();
 
-                dealer.sendTo(sourceIdentity, response);
-                std::cout << "[PLC] Response sent back to " << sourceIdentity << std::endl;
+                dealer.send(response);
+                std::cout << "[PLC] RESPONSE sent" << std::endl;
+
+                // Send EVENT to notify about the processing
+                std::cout << "[PLC] Sending EVENT (request processed)..." << std::endl;
+                Frame event = MessageBuilder::event(nodeID, 0x3000, 0x0001, 0x0001).build();
+                dealer.send(event);
+                sentCount++;
             }
         }
         else if (nodeType == "LOGGER")
         {
-            // Logger receives messages routed to it (or broadcast messages)
-            std::cout << "[LOGGER] Monitoring messages..." << std::endl;
+            // Logger receives broadcast events
+            std::cout << "[LOGGER] Monitoring for events..." << std::endl;
 
-            std::string sourceIdentity;
             Frame frame;
-            if (dealer.receiveFrom(sourceIdentity, frame, 5000))
+            if (dealer.receive(frame, 5000))
             {
                 receivedCount++;
                 MessageParser parser(frame);
-                std::cout << "[LOGGER] Message from " << sourceIdentity 
-                          << ": node=0x" << std::hex << parser.srcNode()
+                std::cout << "[LOGGER] Event from node 0x" << std::hex << parser.srcNode()
                           << " type=0x" << static_cast<int>(parser.msgType())
                           << std::dec << std::endl;
             }

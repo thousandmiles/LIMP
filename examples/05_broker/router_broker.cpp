@@ -91,7 +91,10 @@ int main()
     // This is built dynamically as clients connect
     std::unordered_map<uint16_t, std::string> routingTable;
 
-    std::cout << "Broker Mode: Routes messages based on Frame destination node" << std::endl;
+    std::cout << "Broker Mode: Routes messages based on message type" << std::endl;
+    std::cout << "  - REQUEST  → PLC nodes (0x0030)" << std::endl;
+    std::cout << "  - RESPONSE → HMI nodes (0x0010)" << std::endl;
+    std::cout << "  - EVENT    → All registered nodes (broadcast)" << std::endl;
     std::cout << "Clients should use regular dealer.send() (not sendTo)" << std::endl;
     std::cout << std::endl;
 
@@ -126,62 +129,69 @@ int main()
                       << std::dec << " -> " << sourceIdentity << std::endl;
         }
 
-        // BROKER LOGIC: Route to destination based on Frame's internal addressing
-        // For LIMP, we can use the classID or instanceID as destination indicator
-        // Or extend the Frame to include a destination node field
+        // BROKER LOGIC: Route messages between nodes
         
-        // Example routing strategies:
-        
-        // Strategy 1: Echo back to sender (testing/response mode)
+        // Strategy 1: Route REQUEST messages to PLC, get response, send back to requester
         if (parser.msgType() == MsgType::REQUEST)
         {
-            Frame response = MessageBuilder::response(
-                                 0x0100, // Broker node ID
-                                 parser.classID(),
-                                 parser.instanceID(),
-                                 parser.attrID())
-                                 .build();
-
-            router.send(sourceIdentity, response);
-            std::cout << "  [SENT] Response to: " << sourceIdentity << std::endl;
+            std::cout << "  [ROUTING] Request to PLC nodes" << std::endl;
+            
+            // Find PLC nodes and forward the request
+            bool routed = false;
+            for (const auto &[nodeId, destIdentity] : routingTable)
+            {
+                // Route to PLC nodes (0x0030 is PLC node ID)
+                if (nodeId == 0x0030)
+                {
+                    router.send(destIdentity, incomingFrame);
+                    std::cout << "    -> Forwarded to PLC: " << destIdentity << std::endl;
+                    routed = true;
+                }
+            }
+            
+            if (!routed)
+            {
+                std::cout << "    [WARNING] No PLC nodes registered" << std::endl;
+            }
         }
         
-        // Strategy 2: Broadcast to all registered nodes (except sender)
+        // Strategy 2: Route RESPONSE messages back to original requester
+        else if (parser.msgType() == MsgType::RESPONSE)
+        {
+            std::cout << "  [ROUTING] Response to requesters" << std::endl;
+            
+            // Find HMI/requester nodes and forward the response
+            for (const auto &[nodeId, destIdentity] : routingTable)
+            {
+                // Route to HMI nodes (0x0010 is HMI node ID)
+                if (nodeId == 0x0010 && destIdentity != sourceIdentity)
+                {
+                    router.send(destIdentity, incomingFrame);
+                    std::cout << "    -> Forwarded to HMI: " << destIdentity << std::endl;
+                }
+            }
+        }
+        
+        // Strategy 3: Broadcast EVENT messages to all registered nodes (except sender)
         else if (parser.msgType() == MsgType::EVENT)
         {
             std::cout << "  [BROADCAST] Event to all nodes" << std::endl;
+            int broadcastCount = 0;
             for (const auto &[nodeId, destIdentity] : routingTable)
             {
                 if (destIdentity != sourceIdentity)  // Don't echo to sender
                 {
                     router.send(destIdentity, incomingFrame);
-                    std::cout << "    -> " << destIdentity << std::endl;
+                    std::cout << "    -> Node 0x" << std::hex << nodeId 
+                              << std::dec << " (" << destIdentity << ")" << std::endl;
+                    broadcastCount++;
                 }
             }
-        }
-        
-        // Strategy 3: Route to specific node
-        // For this to work, you'd need to extend Frame protocol to include
-        // a destination node field, or use classID as destination indicator
-        // Example: if classID represents target node ID
-        /*
-        else
-        {
-            uint16_t destNodeId = parser.classID();  // Treat classID as destination
-            auto it = routingTable.find(destNodeId);
-            if (it != routingTable.end())
+            if (broadcastCount == 0)
             {
-                router.send(it->second, incomingFrame);
-                std::cout << "  [ROUTED] To node 0x" << std::hex << destNodeId 
-                          << std::dec << " (" << it->second << ")" << std::endl;
-            }
-            else
-            {
-                std::cout << "  [ERROR] Destination node 0x" << std::hex 
-                          << destNodeId << std::dec << " not found" << std::endl;
+                std::cout << "    [INFO] No other nodes to broadcast to" << std::endl;
             }
         }
-        */
 
         std::cout << "  Total messages: " << totalMessages 
                   << " | Registered nodes: " << routingTable.size() << std::endl;
