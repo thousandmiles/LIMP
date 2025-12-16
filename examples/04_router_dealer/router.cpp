@@ -59,9 +59,14 @@ int main()
     // Create router transport
     ZMQRouter router(config);
 
-    // Set error callback
+    // Set error callback (filter out timeout errors)
     router.setErrorCallback([](const std::string &errorMsg)
-                            { std::cerr << "Router Error: " << errorMsg << std::endl; });
+                            { 
+                                // Don't log timeout errors (expected when waiting for clients)
+                                if (errorMsg.find("Resource temporarily unavailable") == std::string::npos) {
+                                    std::cerr << "Router Error: " << errorMsg << std::endl;
+                                }
+                            });
 
     // Bind to endpoint
     std::string endpoint = "tcp://*:5555";

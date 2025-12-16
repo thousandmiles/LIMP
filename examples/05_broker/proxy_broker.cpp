@@ -94,6 +94,17 @@ int main()
     std::cout << "Press Ctrl+C to stop" << std::endl;
     std::cout << std::endl;
 
+    // Give broker thread time to initialize
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // Check if still running after initialization
+    if (!broker.isRunning())
+    {
+        std::cerr << "ERROR: Broker thread exited immediately after start!" << std::endl;
+        std::cerr << "This may indicate a port conflict or configuration issue." << std::endl;
+        return 1;
+    }
+
     // Keep running until interrupted
     while (running && broker.isRunning())
     {
@@ -105,6 +116,13 @@ int main()
         {
             std::cout << "Broker status: Running (" << counter << "s)" << std::endl;
         }
+    }
+
+    // Check why we exited the loop
+    if (!broker.isRunning() && running)
+    {
+        std::cerr << std::endl;
+        std::cerr << "WARNING: Broker thread stopped unexpectedly!" << std::endl;
     }
 
     std::cout << std::endl;

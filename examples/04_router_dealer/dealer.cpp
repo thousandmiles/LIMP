@@ -44,9 +44,14 @@ int main()
     // Create dealer transport
     ZMQDealer dealer(config);
 
-    // Set error callback
+    // Set error callback (filter out timeout errors)
     dealer.setErrorCallback([](const std::string &errorMsg)
-                            { std::cerr << "Dealer Error: " << errorMsg << std::endl; });
+                            { 
+                                // Don't log timeout errors
+                                if (errorMsg.find("Resource temporarily unavailable") == std::string::npos) {
+                                    std::cerr << "Dealer Error: " << errorMsg << std::endl;
+                                }
+                            });
 
     // Set custom identity (optional - ZeroMQ will generate one if not set)
     std::string identity = "DEALER-HMI-001";

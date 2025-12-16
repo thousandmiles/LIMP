@@ -44,7 +44,9 @@ void publisherThread()
     std::cout << "[Publisher] Bound to tcp://*:5556" << std::endl;
 
     // Wait for subscribers to connect (slow joiner problem workaround)
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    std::cout << "[Publisher] Starting to publish events..." << std::endl;
 
     // Publish events
     int eventCount = 0;
@@ -101,7 +103,7 @@ void subscriberThread(const std::string &topic)
     std::cout << "[Subscriber " << topic << "] Starting..." << std::endl;
 
     // Wait for publisher to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     // Configure and create subscriber
     ZMQConfig config;
@@ -126,6 +128,9 @@ void subscriberThread(const std::string &topic)
     }
 
     std::cout << "[Subscriber " << topic << "] Subscribed to topic: " << topic << std::endl;
+
+    // Give ZeroMQ time to establish subscription
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Receive events
     int eventCount = 0;
