@@ -1,38 +1,31 @@
-add_executable(simple_request simple_request.cpp)
-target_link_libraries(simple_request PRIVATE limp)
+# LIMP Examples
 
-add_executable(simple_response simple_response.cpp)
-target_link_libraries(simple_response PRIVATE limp)
+# Macro to add an example
+macro(add_limp_example category name sources)
+    add_executable(${name} ${sources})
+    target_link_libraries(${name} PRIVATE limp)
+    set_target_properties(${name} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/${category}"
+    )
+endmacro()
 
-add_executable(subscribe_example subscribe_example.cpp)
-target_link_libraries(subscribe_example PRIVATE limp)
+# 01 - Basic Examples (no ZMQ transport)
+add_limp_example("01_basic" "simple_request" "01_basic/simple_request.cpp")
+add_limp_example("01_basic" "simple_response" "01_basic/simple_response.cpp")
 
-# ZeroMQ examples (only if ZMQ support is enabled)
-if(LIMP_BUILD_ZMQ)
-    add_executable(zmq_client_example zmq_client_example.cpp)
-    target_link_libraries(zmq_client_example PRIVATE limp cppzmq)
+# 02 - Request-Reply Pattern (REQ-REP)
+add_limp_example("02_request_reply" "client" "02_request_reply/client.cpp")
+add_limp_example("02_request_reply" "server" "02_request_reply/server.cpp")
 
-    add_executable(zmq_server_example zmq_server_example.cpp)
-    target_link_libraries(zmq_server_example PRIVATE limp cppzmq)
+# 03 - Publish-Subscribe Pattern (PUB-SUB)
+add_limp_example("03_pubsub" "publisher_subscriber" "03_pubsub/publisher_subscriber.cpp")
+add_limp_example("03_pubsub" "subscriber_only" "03_pubsub/subscriber_only.cpp")
 
-    add_executable(zmq_pubsub_example zmq_pubsub_example.cpp)
-    target_link_libraries(zmq_pubsub_example PRIVATE limp cppzmq)
+# 04 - Router-Dealer Patterns
+add_limp_example("04_router_dealer" "router" "04_router_dealer/router.cpp")
+add_limp_example("04_router_dealer" "dealer" "04_router_dealer/dealer.cpp")
 
-    add_executable(zmq_router_example zmq_router_example.cpp)
-    target_link_libraries(zmq_router_example PRIVATE limp cppzmq)
-
-    add_executable(zmq_dealer_example zmq_dealer_example.cpp)
-    target_link_libraries(zmq_dealer_example PRIVATE limp cppzmq)
-
-    add_executable(zmq_proxy_example zmq_proxy_example.cpp)
-    target_link_libraries(zmq_proxy_example PRIVATE limp cppzmq)
-
-    add_executable(zmq_broker_node_example zmq_broker_node_example.cpp)
-    target_link_libraries(zmq_broker_node_example PRIVATE limp cppzmq)
-
-    add_executable(central_server_router central_server_router.cpp)
-    target_link_libraries(central_server_router PRIVATE limp cppzmq)
-
-    add_executable(central_server_proxy central_server_proxy.cpp)
-    target_link_libraries(central_server_proxy PRIVATE limp cppzmq)
-endif()
+# 05 - Message Broker Patterns
+add_limp_example("05_broker" "proxy_broker" "05_broker/proxy_broker.cpp")
+add_limp_example("05_broker" "router_broker" "05_broker/router_broker.cpp")
+add_limp_example("05_broker" "broker_node" "05_broker/broker_node.cpp")
