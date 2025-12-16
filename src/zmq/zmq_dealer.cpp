@@ -57,7 +57,7 @@ namespace limp
         }
     }
 
-    bool ZMQDealer::send(const uint8_t *data, size_t size)
+    bool ZMQDealer::sendRaw(const uint8_t *data, size_t size)
     {
         if (!isConnected())
         {
@@ -67,9 +67,6 @@ namespace limp
         try
         {
             // For direct ROUTER-DEALER communication: send [empty_delimiter][data]
-            // For ROUTER-ROUTER proxy with sendTo: send data only (no delimiter)
-            // We'll use delimiter for direct communication, since sendTo handles routing differently
-
             // Send empty delimiter first
             zmq::message_t delimiterMsg;
             auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
@@ -90,7 +87,7 @@ namespace limp
         }
     }
 
-    std::ptrdiff_t ZMQDealer::receive(uint8_t *buffer, size_t maxSize)
+    std::ptrdiff_t ZMQDealer::receiveRaw(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())
         {
@@ -153,12 +150,12 @@ namespace limp
         {
             return false;
         }
-        return send(buffer.data(), buffer.size());
+        return sendRaw(buffer.data(), buffer.size());
     }
 
-    bool ZMQDealer::sendTo(const std::string &destinationIdentity,
-                           const uint8_t *data,
-                           size_t size)
+    bool ZMQDealer::sendRaw(const std::string &destinationIdentity,
+                            const uint8_t *data,
+                            size_t size)
     {
         if (!isConnected())
         {
@@ -186,19 +183,19 @@ namespace limp
         }
         catch (const zmq::error_t &e)
         {
-            handleError(e, "dealer sendTo");
+            handleError(e, "dealer sendRaw");
             return false;
         }
     }
 
-    bool ZMQDealer::sendTo(const std::string &destinationIdentity, const Frame &frame)
+    bool ZMQDealer::send(const std::string &destinationIdentity, const Frame &frame)
     {
         std::vector<uint8_t> buffer;
         if (!serializeFrame(frame, buffer))
         {
             return false;
         }
-        return sendTo(destinationIdentity, buffer.data(), buffer.size());
+        return sendRaw(destinationIdentity, buffer.data(), buffer.size());
     }
 
     bool ZMQDealer::receive(Frame &frame, int timeoutMs)
@@ -206,7 +203,7 @@ namespace limp
         (void)timeoutMs; // Timeout is set via socket options
 
         std::vector<uint8_t> buffer(4096); // Reasonable default size
-        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
+        std::ptrdiff_t received = receiveRaw(buffer.data(), buffer.size());
 
         if (received <= 0)
         {
@@ -217,9 +214,9 @@ namespace limp
         return deserializeFrame(buffer, frame);
     }
 
-    std::ptrdiff_t ZMQDealer::receiveFrom(std::string &sourceIdentity,
-                                          uint8_t *buffer,
-                                          size_t maxSize)
+    std::ptrdiff_t ZMQDealer::receiveRaw(std::string &sourceIdentity,
+                                         uint8_t *buffer,
+                                         size_t maxSize)
     {
         if (!isConnected())
         {
@@ -279,17 +276,17 @@ namespace limp
         }
         catch (const zmq::error_t &e)
         {
-            handleError(e, "dealer receiveFrom");
+            handleError(e, "dealer receiveRaw");
             return -1;
         }
     }
 
-    bool ZMQDealer::receiveFrom(std::string &sourceIdentity, Frame &frame, int timeoutMs)
+    bool ZMQDealer::receive(std::string &sourceIdentity, Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
 
         std::vector<uint8_t> buffer(4096);
-        std::ptrdiff_t received = receiveFrom(sourceIdentity, buffer.data(), buffer.size());
+        std::ptrdiff_t received = receiveRaw(sourceIdentity, buffer.data(), buffer.size());
 
         if (received <= 0)
         {

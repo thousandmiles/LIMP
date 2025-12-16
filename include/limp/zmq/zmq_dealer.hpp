@@ -121,7 +121,7 @@ namespace limp
          * @param frame Frame to send
          * @return true on success, false on failure
          */
-        bool sendTo(const std::string &destinationIdentity, const Frame &frame);
+        bool send(const std::string &destinationIdentity, const Frame &frame);
 
         /**
          * @brief Receive a LIMP frame
@@ -145,7 +145,7 @@ namespace limp
          * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
          * @return true on success, false on timeout or error
          */
-        bool receiveFrom(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
+        bool receive(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
 
         /**
          * @brief Get the current identity
@@ -154,32 +154,64 @@ namespace limp
          */
         const std::string &getIdentity() const { return identity_; }
 
+        /**
+         * @brief Send raw data
+         *
+         * Sends raw byte data as a multipart message with an empty delimiter frame.
+         *
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return true on success, false on failure
+         */
+        bool sendRaw(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Send raw data with routing
+         *
+         * Sends raw byte data as a multipart message to a specific destination identity.
+         * This is used for routing messages through a ROUTER-ROUTER proxy.
+         * The message format is: [destination_identity][empty_delimiter][data].
+         *
+         * @param destinationIdentity Target node's identity
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return true on success, false on failure
+         */
+        bool sendRaw(const std::string &destinationIdentity,
+                     const uint8_t *data,
+                     size_t size);
+
+        /**
+         * @brief Receive raw data
+         *
+         * Receives raw byte data from the socket.
+         *
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
+         */
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize);
+
+        /**
+         * @brief Receive raw data with source identity
+         *
+         * Receives raw byte data from the socket along with the source identity.
+         * If the message is routed through a ROUTER, the identity of the original sender is extracted.
+         * The router explicitly adds the identity in the multipart message.
+         * The router message format is: [dealer_identity][source_identity][delimiter][data].
+         * The dealer received message format: [source_identity][delimiter][data].
+         *
+         * @param sourceIdentity Output: sender's identity
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
+         */
+        std::ptrdiff_t receiveRaw(std::string &sourceIdentity,
+                                  uint8_t *buffer,
+                                  size_t maxSize);
+
     private:
         std::string identity_; ///< Socket identity
-
-        /**
-         * @brief Internal helper to send raw data
-         */
-        bool send(const uint8_t *data, size_t size);
-
-        /**
-         * @brief Internal helper to receive raw data
-         */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
-
-        /**
-         * @brief Internal helper to receive raw data with source identity
-         */
-        std::ptrdiff_t receiveFrom(std::string &sourceIdentity,
-                                   uint8_t *buffer,
-                                   size_t maxSize);
-
-        /**
-         * @brief Internal helper to send raw data with routing
-         */
-        bool sendTo(const std::string &destinationIdentity,
-                    const uint8_t *data,
-                    size_t size);
     };
 
 } // namespace limp
