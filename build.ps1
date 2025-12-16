@@ -15,10 +15,10 @@ switch ($Preset) {
 }
 
 Write-Host "==> Installing dependencies with Conan ($ConanBuildType)..." -ForegroundColor Cyan
-conan install . --output-folder=build/$Preset --build=missing -s build_type=$ConanBuildType -o "*:shared=False"
+python -m conans.conan install . --output-folder=build/$Preset --build=missing -s build_type=$ConanBuildType -o "*:shared=False"
 
 Write-Host "==> Configuring with CMake (preset: $Preset)..." -ForegroundColor Cyan
-cmake --preset $Preset
+cmake --preset $Preset -DCMAKE_TOOLCHAIN_FILE="build/$Preset/build/generators/conan_toolchain.cmake"
 
 Write-Host "==> Building..." -ForegroundColor Cyan
 cmake --build --preset $Preset
