@@ -5,7 +5,8 @@ namespace limp
 {
 
     ZMQProxy::ZMQProxy(ProxyType type, const ZMQConfig &config)
-        : type_(type), config_(config), running_(false), stopRequested_(false), frontendBind_(true), backendBind_(true)
+        : type_(type), config_(config), running_(false), stopRequested_(false), 
+          frontendBind_(true), backendBind_(true)
     {
         context_ = std::make_unique<zmq::context_t>(config_.ioThreads);
     }
@@ -101,6 +102,12 @@ namespace limp
 
         stopRequested_ = true;
 
+        // Shutdown context to terminate proxy
+        if (context_)
+        {
+            context_->shutdown();
+        }
+
         // Wait for thread to finish
         if (thread_ && thread_->joinable())
         {
@@ -109,6 +116,9 @@ namespace limp
 
         thread_.reset();
         running_ = false;
+
+        // Recreate context for potential restart
+        context_ = std::make_unique<zmq::context_t>(config_.ioThreads);
     }
 
     zmq::socket_type ZMQProxy::getFrontendSocketType() const
@@ -121,7 +131,7 @@ namespace limp
         case ProxyType::DEALER_DEALER:
             return zmq::socket_type::dealer;
         case ProxyType::XPUB_XSUB:
-            return zmq::socket_type::xpub;
+            return zmq::socket_type::xsub; // Publishers connect to XSUB
         default:
             return zmq::socket_type::router;
         }
@@ -137,7 +147,7 @@ namespace limp
         case ProxyType::ROUTER_ROUTER:
             return zmq::socket_type::router;
         case ProxyType::XPUB_XSUB:
-            return zmq::socket_type::xsub;
+            return zmq::socket_type::xpub; // Subscribers connect to XPUB
         default:
             return zmq::socket_type::dealer;
         }
@@ -210,19 +220,19 @@ namespace limp
 
             running_ = true;
 
-            // Optional capture socket
+            // Run proxy with optional capture socket
             if (!captureEndpoint_.empty())
             {
                 zmq::socket_t capture(*context_, zmq::socket_type::pub);
                 capture.bind(captureEndpoint_);
 
-                // Run proxy with capture
-                zmq::proxy_steerable(frontend, backend, capture, zmq::socket_ref());
+                // Run proxy with capture (blocks until context terminated)
+                zmq::proxy(zmq::socket_ref(frontend), zmq::socket_ref(backend), zmq::socket_ref(capture));
             }
             else
             {
-                // Run proxy without capture
-                zmq::proxy_steerable(frontend, backend, zmq::socket_ref(), zmq::socket_ref());
+                // Run proxy (blocks until context terminated)
+                zmq::proxy(zmq::socket_ref(frontend), zmq::socket_ref(backend));
             }
         }
         catch (const zmq::error_t &e)
