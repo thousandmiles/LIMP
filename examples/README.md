@@ -5,11 +5,13 @@ Examples demonstrating LIMP protocol with ZeroMQ transport.
 ## Build
 
 **Linux/Mac:**
+
 ```bash
 ./build.sh release-all
 ```
 
 **Windows:**
+
 ```powershell
 .\build.ps1 release-all
 ```
@@ -19,29 +21,35 @@ Executables: `build/examples/`
 ## Examples
 
 ### [01_basic/](01_basic/) - Protocol Basics
+
 - `simple_request.cpp` - Build and parse LIMP messages (no network)
 - `simple_response.cpp` - Response messages with different payload types
 
 ### [02_request_reply/](02_request_reply/) - REQ-REP Pattern
+
 - `client.cpp` - Request client
 - `server.cpp` - Reply server
 
 ### [03_pubsub/](03_pubsub/) - PUB-SUB Pattern
+
 - `publisher_subscriber.cpp` - Publisher + subscriber in one program
 - `subscriber_only.cpp` - Standalone subscriber
 
 ### [04_router_dealer/](04_router_dealer/) - ROUTER-DEALER Pattern
+
 - `router.cpp` - ROUTER socket for routing
 - `dealer.cpp` - DEALER socket for async requests
 
 ### [05_broker/](05_broker/) - Message Brokers
+
 - `router_broker.cpp` - Custom routing logic with content-based routing ⭐ **RECOMMENDED**
 - `broker_node.cpp` - Example nodes (HMI, PLC, Logger) using router broker
-- `direct_routing.cpp` - Demonstrates sendTo/receive pattern with explicit destination addressing
+- `direct_routing.cpp` - Demonstrates send/receive pattern with explicit destination addressing
 
 ## Usage
 
 **Linux/Mac:**
+
 ```bash
 # Basic (no network)
 ./build/examples/01_basic/simple_request
@@ -69,6 +77,7 @@ NODE_TYPE=LOGGER ./build/examples/05_broker/broker_node
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 # Basic (no network)
 .\build\examples\01_basic\Release\simple_request.exe
