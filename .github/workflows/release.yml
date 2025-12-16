@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies with Conan
         run: |
-          conan install . --output-folder=build/release --build=missing -s build_type=Release -s compiler.cppstd=17
+          conan install . --output-folder=build/release --build=missing -s build_type=Release
 
       - name: Build package
         run: |
@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies with Conan
         shell: powershell
         run: |
-          conan install . --output-folder=build/release --build=missing -s build_type=Release -s compiler.cppstd=17
+          conan install . --output-folder=build/release --build=missing -s build_type=Release
 
       - name: Build package
         shell: powershell
