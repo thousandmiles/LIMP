@@ -66,9 +66,21 @@ namespace limp
 
         try
         {
-            // DEALER sends data directly (no identity frame needed on send)
-            zmq::message_t message(data, size);
-            auto result = socket_->send(message, zmq::send_flags::none);
+            // For direct ROUTER-DEALER communication: send [empty_delimiter][data]
+            // For ROUTER-ROUTER proxy with sendTo: send data only (no delimiter)
+            // We'll use delimiter for direct communication, since sendTo handles routing differently
+            
+            // Send empty delimiter first
+            zmq::message_t delimiterMsg;
+            auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
+            if (!delimiterResult)
+            {
+                return false;
+            }
+            
+            // Send data
+            zmq::message_t dataMsg(data, size);
+            auto result = socket_->send(dataMsg, zmq::send_flags::none);
             return result.has_value();
         }
         catch (const zmq::error_t &e)
@@ -87,23 +99,44 @@ namespace limp
 
         try
         {
-            // DEALER receives data directly (no identity frame on receive)
-            zmq::message_t message;
-            auto result = socket_->recv(message, zmq::recv_flags::none);
-
-            if (!result)
+            // DEALER receives multi-part messages from ROUTER
+            // Format after ROUTER strips our identity: [delimiter][data]
+            // We need to skip the delimiter and read the data part
+            
+            // Receive all message parts
+            std::vector<zmq::message_t> parts;
+            while (true)
             {
-                return 0; // Timeout
+                zmq::message_t msg;
+                auto result = socket_->recv(msg, zmq::recv_flags::none);
+                
+                if (!result)
+                {
+                    return 0; // Timeout
+                }
+                
+                parts.push_back(std::move(msg));
+                
+                // Check if more parts are coming
+                auto more = socket_->get(zmq::sockopt::rcvmore);
+                if (!more)
+                {
+                    break;
+                }
             }
-
-            size_t receivedSize = message.size();
+            
+            // If single-part message, it's the data directly
+            // If multi-part message, last part is the data (skip delimiter)
+            const auto& dataMsg = parts.back();
+            size_t receivedSize = dataMsg.size();
+            
             if (receivedSize > maxSize)
             {
                 handleError(zmq::error_t(), "received message larger than buffer");
                 return -1;
             }
 
-            std::memcpy(buffer, message.data(), receivedSize);
+            std::memcpy(buffer, dataMsg.data(), receivedSize);
             return static_cast<std::ptrdiff_t>(receivedSize);
         }
         catch (const zmq::error_t &e)

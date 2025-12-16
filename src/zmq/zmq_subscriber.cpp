@@ -123,28 +123,23 @@ namespace limp
                 }
             }
 
-            // Calculate total size
-            size_t totalSize = 0;
-            for (const auto &msg : messages)
-            {
-                totalSize += msg.size();
-            }
+            // If there are multiple parts, the first part is the topic (skip it)
+            // The actual frame data is in the last part
+            size_t dataPartIndex = (messages.size() > 1) ? messages.size() - 1 : 0;
+            
+            const auto &dataMsg = messages[dataPartIndex];
+            size_t dataSize = dataMsg.size();
 
-            if (totalSize > maxSize)
+            if (dataSize > maxSize)
             {
                 handleError(zmq::error_t(), "received message larger than buffer");
                 return -1;
             }
 
-            // Copy all parts to buffer
-            size_t offset = 0;
-            for (const auto &msg : messages)
-            {
-                std::memcpy(buffer + offset, msg.data(), msg.size());
-                offset += msg.size();
-            }
+            // Copy only the data part to buffer (skip topic if present)
+            std::memcpy(buffer, dataMsg.data(), dataSize);
 
-            return static_cast<std::ptrdiff_t>(totalSize);
+            return static_cast<std::ptrdiff_t>(dataSize);
         }
         catch (const zmq::error_t &e)
         {
