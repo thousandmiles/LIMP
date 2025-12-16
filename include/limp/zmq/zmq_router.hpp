@@ -103,7 +103,7 @@ namespace limp
          *
          * Receives and deserializes a LIMP frame, extracting both the sender's
          * identity and the intended destination identity. Use this when clients
-         * send messages with destination (dealer.sendTo(dest, frame)).
+         * send messages with destination (dealer.send(dest, frame)).
          *
          * @param sourceIdentity Output: sender's identity
          * @param destinationIdentity Output: intended recipient's identity (empty if not specified)
@@ -129,6 +129,19 @@ namespace limp
         bool send(const std::string &clientIdentity, const Frame &frame);
 
         /**
+         * @brief Send a LIMP frame to a specific client with source identity
+         *
+         * Serializes and sends a LIMP frame to the client with the specified identity.
+         * The identity should be obtained from a previous receive() call.
+         *
+         * @param clientIdentity Client identity to send to
+         * @param sourceIdentity Source identity representing the sender
+         * @param frame Frame to send
+         * @return true on success, false on failure
+         */
+        bool send(const std::string &clientIdentity, const std::string &sourceIdentity, const Frame &frame);
+
+        /**
          * @brief Not supported for router (use identity-based send)
          * @return false
          */
@@ -140,16 +153,32 @@ namespace limp
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
-    private:
         /**
-         * @brief Internal helper to receive raw multipart message
+         * @brief Receive raw multipart message
+         *
+         * Receives raw byte data from the socket along with source identity.
+         * Message format: [source_identity][delimiter][data].
+         *
+         * @param identity Output: sender's identity
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
          */
         std::ptrdiff_t receiveRaw(std::vector<uint8_t> &identity,
                                   uint8_t *buffer,
                                   size_t maxSize);
 
         /**
-         * @brief Internal helper to receive raw data for 5-frame routing messages
+         * @brief Receive raw data for 4-frame routing messages
+         *
+         * Receives raw byte data from the socket along with source and destination identities.
+         * Message format: [source_identity][destination_identity][delimiter][data].
+         *
+         * @param sourceIdentity Output: sender's identity
+         * @param destinationIdentity Output: intended recipient's identity
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
          */
         std::ptrdiff_t receiveRaw(std::vector<uint8_t> &sourceIdentity,
                                   std::vector<uint8_t> &destinationIdentity,
@@ -157,9 +186,34 @@ namespace limp
                                   size_t maxSize);
 
         /**
-         * @brief Internal helper to send raw data to client
+         * @brief Send raw data to client
+         *
+         * Sends raw byte data as a multipart message to a specific client identity.
+         * Message format: [identity][delimiter][data].
+         *
+         * @param clientIdentity Target client identity
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return true on success, false on failure
          */
-        bool sendRaw(const std::vector<uint8_t> &identity,
+        bool sendRaw(const std::vector<uint8_t> &clientIdentity,
+                     const uint8_t *data,
+                     size_t size);
+
+        /**
+         * @brief Send raw data to client with source identity
+         *
+         * Sends raw byte data as a multipart message to a specific client identity.
+         * Message format: [clientIdentity][sourceIdentity][delimiter][data].
+         *
+         * @param clientIdentity Target client identity
+         * @param sourceIdentity Source identity representing the sender
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return true on success, false on failure
+         */
+        bool sendRaw(const std::vector<uint8_t> &clientIdentity,
+                     const std::vector<uint8_t> &sourceIdentity,
                      const uint8_t *data,
                      size_t size);
     };

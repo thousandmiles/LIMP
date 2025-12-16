@@ -44,19 +44,19 @@ namespace limp
         {
             // Receive all message parts
             std::vector<zmq::message_t> parts;
-            
+
             while (true)
             {
                 zmq::message_t msg;
                 auto result = socket_->recv(msg, zmq::recv_flags::none);
-                
+
                 if (!result)
                 {
                     return 0; // Timeout
                 }
-                
+
                 parts.push_back(std::move(msg));
-                
+
                 // Check if more parts are coming
                 auto more = socket_->get(zmq::sockopt::rcvmore);
                 if (!more)
@@ -64,7 +64,7 @@ namespace limp
                     break;
                 }
             }
-            
+
             // ROUTER receives: [identity][delimiter][data]
             // We need at least 3 parts
             if (parts.size() < 3)
@@ -72,17 +72,17 @@ namespace limp
                 handleError(zmq::error_t(), "router receive: incomplete message");
                 return -1;
             }
-            
+
             // Extract identity (first part)
-            const auto& identityMsg = parts[0];
+            const auto &identityMsg = parts[0];
             identity.assign(static_cast<const uint8_t *>(identityMsg.data()),
-                           static_cast<const uint8_t *>(identityMsg.data()) + identityMsg.size());
-            
+                            static_cast<const uint8_t *>(identityMsg.data()) + identityMsg.size());
+
             // Skip delimiter (second part - empty frame)
             // Extract data (last part)
-            const auto& dataMsg = parts.back();
+            const auto &dataMsg = parts.back();
             size_t receivedSize = dataMsg.size();
-            
+
             if (receivedSize > maxSize)
             {
                 handleError(zmq::error_t(), "received message larger than buffer");
@@ -135,19 +135,19 @@ namespace limp
         {
             // Receive all message parts
             std::vector<zmq::message_t> parts;
-            
+
             while (true)
             {
                 zmq::message_t msg;
                 auto result = socket_->recv(msg, zmq::recv_flags::none);
-                
+
                 if (!result)
                 {
                     return 0; // Timeout
                 }
-                
+
                 parts.push_back(std::move(msg));
-                
+
                 // Check if more parts are coming
                 auto more = socket_->get(zmq::sockopt::rcvmore);
                 if (!more)
@@ -155,8 +155,8 @@ namespace limp
                     break;
                 }
             }
-            
-            // ROUTER receives with destination routing from DEALER sendTo():
+
+            // ROUTER receives with destination routing from DEALER send(dst, frame):
             // - DEALER sends: [dest_identity][delimiter][data] (3 parts)
             // - ROUTER prepends source identity: [source_identity][dest_identity][delimiter][data] (4 parts)
             // We need at least 4 parts for routed messages
@@ -165,23 +165,23 @@ namespace limp
                 handleError(zmq::error_t(), "router receive: incomplete routed message");
                 return -1;
             }
-            
+
             // Extract source identity (first part - auto-added by ROUTER)
-            const auto& srcIdentityMsg = parts[0];
+            const auto &srcIdentityMsg = parts[0];
             sourceIdentity.assign(static_cast<const uint8_t *>(srcIdentityMsg.data()),
-                                 static_cast<const uint8_t *>(srcIdentityMsg.data()) + srcIdentityMsg.size());
-            
-            // Extract destination identity (second part - from dealer's sendTo)
-            const auto& destIdentityMsg = parts[1];
+                                  static_cast<const uint8_t *>(srcIdentityMsg.data()) + srcIdentityMsg.size());
+
+            // Extract destination identity (second part - from dealer's send(dst, frame))
+            const auto &destIdentityMsg = parts[1];
             destinationIdentity.assign(static_cast<const uint8_t *>(destIdentityMsg.data()),
-                                      static_cast<const uint8_t *>(destIdentityMsg.data()) + destIdentityMsg.size());
-            
+                                       static_cast<const uint8_t *>(destIdentityMsg.data()) + destIdentityMsg.size());
+
             // Skip delimiter (third part - empty frame)
-            
+
             // Extract data (fourth/last part)
-            const auto& dataMsg = parts.back();
+            const auto &dataMsg = parts.back();
             size_t receivedSize = dataMsg.size();
-            
+
             if (receivedSize > maxSize)
             {
                 handleError(zmq::error_t(), "received message larger than buffer");
@@ -208,7 +208,7 @@ namespace limp
         std::vector<uint8_t> srcIdentityVec;
         std::vector<uint8_t> destIdentityVec;
         std::vector<uint8_t> buffer(4096);
-        
+
         std::ptrdiff_t received = receiveRaw(srcIdentityVec, destIdentityVec, buffer.data(), buffer.size());
 
         if (received <= 0)
@@ -263,6 +263,54 @@ namespace limp
         }
     }
 
+    bool ZMQRouter::sendRaw(const std::vector<uint8_t> &clientIdentity,
+                            const std::vector<uint8_t> &sourceIdentity,
+                            const uint8_t *data,
+                            size_t size)
+    {
+        if (!isConnected())
+        {
+            return false;
+        }
+
+        try
+        {
+            // Send client identity frame
+            zmq::message_t clientIdentityMsg(clientIdentity.data(), clientIdentity.size());
+            auto clientIdentityResult = socket_->send(clientIdentityMsg, zmq::send_flags::sndmore);
+            if (!clientIdentityResult)
+            {
+                return false;
+            }
+
+            // Send source identity frame
+            zmq::message_t sourceIdentityMsg(sourceIdentity.data(), sourceIdentity.size());
+            auto sourceIdentityResult = socket_->send(sourceIdentityMsg, zmq::send_flags::sndmore);
+            if (!sourceIdentityResult)
+            {
+                return false;
+            }
+
+            // Send delimiter frame (empty)
+            zmq::message_t delimiterMsg;
+            auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
+            if (!delimiterResult)
+            {
+                return false;
+            }
+
+            // Send data frame
+            zmq::message_t dataMsg(data, size);
+            auto dataResult = socket_->send(dataMsg, zmq::send_flags::none);
+            return dataResult.has_value();
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "router send");
+            return false;
+        }
+    }
+
     bool ZMQRouter::send(const std::string &clientIdentity, const Frame &frame)
     {
         std::vector<uint8_t> buffer;
@@ -274,6 +322,23 @@ namespace limp
         // Convert string identity to vector<uint8_t>
         std::vector<uint8_t> identityVec(clientIdentity.begin(), clientIdentity.end());
         return sendRaw(identityVec, buffer.data(), buffer.size());
+    }
+
+    bool ZMQRouter::send(const std::string &clientIdentity,
+                         const std::string &sourceIdentity,
+                         const Frame &frame)
+    {
+        std::vector<uint8_t> buffer;
+        if (!serializeFrame(frame, buffer))
+        {
+            return false;
+        }
+
+        // Convert string identities to vector<uint8_t>
+        std::vector<uint8_t> clientIdentityVec(clientIdentity.begin(), clientIdentity.end());
+        std::vector<uint8_t> sourceIdentityVec(sourceIdentity.begin(), sourceIdentity.end());
+
+        return sendRaw(clientIdentityVec, sourceIdentityVec, buffer.data(), buffer.size());
     }
 
     bool ZMQRouter::send(const Frame &frame)
