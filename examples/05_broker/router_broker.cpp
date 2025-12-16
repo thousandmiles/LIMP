@@ -24,7 +24,7 @@
  *
  * LIMITATION:
  * - Requires consistent srcNode IDs from clients
- * - Cannot use dealer.sendTo() pattern (use regular send())
+ * - Cannot use dealer.send(identity, frame) pattern (use regular send())
  * - More complex than ZMQProxy for simple forwarding
  *
  * Use when you need:
@@ -86,7 +86,7 @@ int main()
     // Track statistics
     std::unordered_map<std::string, int> nodeMessageCount;
     int totalMessages = 0;
-    
+
     // Routing table: maps srcNode ID -> socket identity
     // This is built dynamically as clients connect
     std::unordered_map<uint16_t, std::string> routingTable;
@@ -95,7 +95,7 @@ int main()
     std::cout << "  - REQUEST  → PLC nodes (0x0030)" << std::endl;
     std::cout << "  - RESPONSE → HMI nodes (0x0010)" << std::endl;
     std::cout << "  - EVENT    → All registered nodes (broadcast)" << std::endl;
-    std::cout << "Clients should use regular dealer.send() (not sendTo)" << std::endl;
+    std::cout << "Clients should use regular dealer.send() (not send(dst, frame))" << std::endl;
     std::cout << std::endl;
 
     // Main server loop - broker messages between nodes
@@ -125,17 +125,17 @@ int main()
         if (routingTable.find(parser.srcNode()) == routingTable.end())
         {
             routingTable[parser.srcNode()] = sourceIdentity;
-            std::cout << "  [REGISTERED] Node 0x" << std::hex << parser.srcNode() 
+            std::cout << "  [REGISTERED] Node 0x" << std::hex << parser.srcNode()
                       << std::dec << " -> " << sourceIdentity << std::endl;
         }
 
         // BROKER LOGIC: Route messages between nodes
-        
+
         // Strategy 1: Route REQUEST messages to PLC, get response, send back to requester
         if (parser.msgType() == MsgType::REQUEST)
         {
             std::cout << "  [ROUTING] Request to PLC nodes" << std::endl;
-            
+
             // Find PLC nodes and forward the request
             bool routed = false;
             for (const auto &[nodeId, destIdentity] : routingTable)
@@ -148,18 +148,18 @@ int main()
                     routed = true;
                 }
             }
-            
+
             if (!routed)
             {
                 std::cout << "    [WARNING] No PLC nodes registered" << std::endl;
             }
         }
-        
+
         // Strategy 2: Route RESPONSE messages back to original requester
         else if (parser.msgType() == MsgType::RESPONSE)
         {
             std::cout << "  [ROUTING] Response to requesters" << std::endl;
-            
+
             // Find HMI/requester nodes and forward the response
             for (const auto &[nodeId, destIdentity] : routingTable)
             {
@@ -171,7 +171,7 @@ int main()
                 }
             }
         }
-        
+
         // Strategy 3: Broadcast EVENT messages to all registered nodes (except sender)
         else if (parser.msgType() == MsgType::EVENT)
         {
@@ -179,10 +179,10 @@ int main()
             int broadcastCount = 0;
             for (const auto &[nodeId, destIdentity] : routingTable)
             {
-                if (destIdentity != sourceIdentity)  // Don't echo to sender
+                if (destIdentity != sourceIdentity) // Don't echo to sender
                 {
                     router.send(destIdentity, incomingFrame);
-                    std::cout << "    -> Node 0x" << std::hex << nodeId 
+                    std::cout << "    -> Node 0x" << std::hex << nodeId
                               << std::dec << " (" << destIdentity << ")" << std::endl;
                     broadcastCount++;
                 }
@@ -193,7 +193,7 @@ int main()
             }
         }
 
-        std::cout << "  Total messages: " << totalMessages 
+        std::cout << "  Total messages: " << totalMessages
                   << " | Registered nodes: " << routingTable.size() << std::endl;
         std::cout << std::endl;
     }

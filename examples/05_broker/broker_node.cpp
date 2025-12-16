@@ -103,8 +103,8 @@ int main()
     // For ROUTER-ROUTER proxy message broker: all nodes connect to frontend
     // The proxy doesn't route by destination in messages - it routes by socket
     // For true message broker with destination routing, use router_broker.cpp instead
-    std::string brokerEndpoint = "tcp://127.0.0.1:5555";  // All connect to frontend
-    
+    std::string brokerEndpoint = "tcp://127.0.0.1:5555"; // All connect to frontend
+
     std::cout << "Connecting to broker at " << brokerEndpoint << "..." << std::endl;
 
     if (!dealer.connect(brokerEndpoint))
@@ -179,14 +179,15 @@ int main()
             {
                 receivedCount++;
                 MessageParser parser(request);
-                std::cout << "[PLC] Received REQUEST from node 0x" << std::hex 
+                std::cout << "[PLC] Received REQUEST from node 0x" << std::hex
                           << parser.srcNode() << std::dec << std::endl;
 
                 // Send response (router_broker routes back to sender)
                 sentCount++;
-                Frame response = MessageBuilder::response(nodeID, parser.classID(), 
-                                                         parser.instanceID(), 
-                                                         parser.attrID()).build();
+                Frame response = MessageBuilder::response(nodeID, parser.classID(),
+                                                          parser.instanceID(),
+                                                          parser.attrID())
+                                     .build();
 
                 dealer.send(response);
                 std::cout << "[PLC] RESPONSE sent" << std::endl;

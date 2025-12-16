@@ -1,20 +1,20 @@
 /**
  * @file direct_routing.cpp
- * @brief Example demonstrating direct destination-based routing with sendTo/receive
+ * @brief Example demonstrating direct destination-based routing with send/receive
  *
- * This example shows how to use ZMQDealer::sendTo() and ZMQRouter::receive()
+ * This example shows how to use ZMQDealer::send(destination, frame) and ZMQRouter::receive()
  * with destination identities for explicit peer-to-peer routing through a router.
  *
- * Pattern: DEALER clients use sendTo(destination, frame) to specify recipient.
+ * Pattern: DEALER clients use send(destination, frame) to specify recipient.
  * Router receives both source and destination identities, then forwards accordingly.
  *
  * Message flow:
- *   1. Client A: dealer.sendTo("ClientB_Identity", frame)
+ *   1. Client A: dealer.send("ClientB_Identity", frame)
  *      Sends: [dest_identity][delimiter][data]
- *   
+ *
  *   2. Router receives: [source_identity][dest_identity][delimiter][data] (4 parts)
  *      Using: router.receive(source, dest, frame)
- *   
+ *
  *   3. Router forwards to destination: router.send(dest_identity, frame)
  *
  * Note: In this demo, clients send to the ACTUAL socket identity of the destination.
@@ -65,9 +65,8 @@ void routerThread()
     config.sendTimeout = 1000;
 
     ZMQRouter router(config);
-    router.setErrorCallback([](const std::string &msg) {
-        std::cerr << "[Router] Error: " << msg << std::endl;
-    });
+    router.setErrorCallback([](const std::string &msg)
+                            { std::cerr << "[Router] Error: " << msg << std::endl; });
 
     if (!router.bind("tcp://*:5555"))
     {
@@ -91,28 +90,28 @@ void routerThread()
         if (router.receive(sourceIdentity, destinationIdentity, frame, 1000))
         {
             uint16_t srcNodeId = frame.srcNodeID;
-            
+
             // Register source node
             if (nodeRegistry.find(srcNodeId) == nodeRegistry.end())
             {
                 nodeRegistry[srcNodeId] = sourceIdentity;
-                std::cout << "[Router] Registered node 0x" << std::hex << srcNodeId 
+                std::cout << "[Router] Registered node 0x" << std::hex << srcNodeId
                           << " with identity: 0x" << identityToHex(sourceIdentity) << std::dec << std::endl;
             }
 
             std::cout << "[Router] Routing message:" << std::endl;
-            std::cout << "  From: Node 0x" << std::hex << srcNodeId 
+            std::cout << "  From: Node 0x" << std::hex << srcNodeId
                       << " (identity: 0x" << identityToHex(sourceIdentity) << ")" << std::dec << std::endl;
             std::cout << "  To: (requested dest: 0x" << identityToHex(destinationIdentity) << ")" << std::endl;
             std::cout << "  Type: " << static_cast<int>(frame.msgType) << std::dec << std::endl;
 
-            // The destination identity is provided by the sender in sendTo()
+            // The destination identity is provided by the sender in send(dest, frame)
             // We could use it directly or look up in registry
             // For now, forward to the requested destination identity
             if (!destinationIdentity.empty())
             {
                 std::cout << "  Forwarding to destination identity: 0x" << identityToHex(destinationIdentity) << std::endl;
-                
+
                 if (router.send(destinationIdentity, frame))
                 {
                     std::cout << "  ✓ Routed successfully" << std::endl;
@@ -134,12 +133,12 @@ void routerThread()
     std::cout << "[Router] Shutting down..." << std::endl;
 }
 
-// Client node using sendTo for direct routing
+// Client node using send(dst, frame) for direct routing
 void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeId, int delaySeconds)
 {
     std::this_thread::sleep_for(std::chrono::seconds(delaySeconds));
 
-    std::cout << "[" << name << "] Starting client (node 0x" << std::hex << nodeId 
+    std::cout << "[" << name << "] Starting client (node 0x" << std::hex << nodeId
               << ")" << std::dec << std::endl;
 
     ZMQConfig config;
@@ -147,9 +146,8 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
     config.sendTimeout = 1000;
 
     ZMQDealer dealer(config);
-    dealer.setErrorCallback([name](const std::string &msg) {
-        std::cerr << "[" << name << "] Error: " << msg << std::endl;
-    });
+    dealer.setErrorCallback([name](const std::string &msg)
+                            { std::cerr << "[" << name << "] Error: " << msg << std::endl; });
 
     if (!dealer.connect("tcp://localhost:5555"))
     {
@@ -159,18 +157,18 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
 
     std::cout << "[" << name << "] Connected to router" << std::endl;
 
-    // Send registration message using sendTo to router ("ROUTER" identity)
+    // Send registration message using send(dst, frame) to router ("ROUTER" identity)
     Frame regFrame = MessageBuilder()
-        .setSrcNode(nodeId)
-        .setMsgType(MsgType::EVENT)
-        .setClass(0)
-        .setInstance(0)
-        .setAttribute(0)
-        .setPayload(std::vector<uint8_t>{0x01}) // Registration payload
-        .build();
+                         .setSrcNode(nodeId)
+                         .setMsgType(MsgType::EVENT)
+                         .setClass(0)
+                         .setInstance(0)
+                         .setAttribute(0)
+                         .setPayload(std::vector<uint8_t>{0x01}) // Registration payload
+                         .build();
 
     // Use "ROUTER" as the destination for registration
-    if (dealer.sendTo("ROUTER", regFrame))
+    if (dealer.send("ROUTER", regFrame))
     {
         std::cout << "[" << name << "] Sent registration to ROUTER" << std::endl;
     }
@@ -182,29 +180,29 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
 
     while (running && messageCount < 5)
     {
-        // Send message to specific destination using sendTo
+        // Send message to specific destination using send(dst, frame)
         std::string payload = name + " message #" + std::to_string(messageCount + 1);
         std::vector<uint8_t> payloadBytes(payload.begin(), payload.end());
 
         Frame frame = MessageBuilder()
-            .setSrcNode(nodeId)
-            .setMsgType(MsgType::REQUEST)
-            .setClass(1)
-            .setInstance(targetNodeId) // Use instance as target for demo
-            .setAttribute(1)
-            .setPayload(payloadBytes)
-            .build();
+                          .setSrcNode(nodeId)
+                          .setMsgType(MsgType::REQUEST)
+                          .setClass(1)
+                          .setInstance(targetNodeId) // Use instance as target for demo
+                          .setAttribute(1)
+                          .setPayload(payloadBytes)
+                          .build();
 
         // Convert targetNodeId to string for destination identity
         // Note: In practice, you'd use actual socket identities
         std::string destIdentity = "Node_" + std::to_string(targetNodeId);
 
         std::cout << "[" << name << "] Sending to destination: " << destIdentity << std::endl;
-        
-        if (dealer.sendTo(destIdentity, frame))
+
+        if (dealer.send(destIdentity, frame))
         {
             messageCount++;
-            std::cout << "[" << name << "] Sent message #" << messageCount 
+            std::cout << "[" << name << "] Sent message #" << messageCount
                       << " to node 0x" << std::hex << targetNodeId << std::dec << std::endl;
         }
         else
@@ -217,10 +215,10 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
         if (dealer.receive(response, 1000))
         {
             receivedCount++;
-            std::string receivedPayload(response.payload.begin(), 
-                                       response.payload.end());
-            std::cout << "[" << name << "] ← Received response #" << receivedCount 
-                      << " from node 0x" << std::hex << response.srcNodeID 
+            std::string receivedPayload(response.payload.begin(),
+                                        response.payload.end());
+            std::cout << "[" << name << "] ← Received response #" << receivedCount
+                      << " from node 0x" << std::hex << response.srcNodeID
                       << std::dec << ": " << receivedPayload << std::endl;
         }
 
@@ -230,32 +228,32 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
     // Wait for remaining responses
     std::cout << "[" << name << "] Sent all messages, waiting for remaining responses..." << std::endl;
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    
+
     while (running && receivedCount < messageCount && std::chrono::steady_clock::now() < timeout)
     {
         Frame response;
         if (dealer.receive(response, 1000))
         {
             receivedCount++;
-            std::string receivedPayload(response.payload.begin(), 
-                                       response.payload.end());
-            std::cout << "[" << name << "] ← Received response #" << receivedCount 
-                      << " from node 0x" << std::hex << response.srcNodeID 
+            std::string receivedPayload(response.payload.begin(),
+                                        response.payload.end());
+            std::cout << "[" << name << "] ← Received response #" << receivedCount
+                      << " from node 0x" << std::hex << response.srcNodeID
                       << std::dec << ": " << receivedPayload << std::endl;
         }
     }
 
-    std::cout << "[" << name << "] Final stats: sent=" << messageCount 
+    std::cout << "[" << name << "] Final stats: sent=" << messageCount
               << ", received=" << receivedCount << std::endl;
     std::cout << "[" << name << "] Shutting down..." << std::endl;
 }
 
 int main()
 {
-    std::cout << "=== LIMP Direct Routing Example (sendTo/receive) ===" << std::endl;
+    std::cout << "=== LIMP Direct Routing Example (send(dst, frame)/receive) ===" << std::endl;
     std::cout << std::endl;
     std::cout << "This example demonstrates explicit destination routing:" << std::endl;
-    std::cout << "  - Clients use sendTo(destination, frame) to specify recipient" << std::endl;
+    std::cout << "  - Clients use send(dst, frame) to specify recipient" << std::endl;
     std::cout << "  - Router extracts both source and destination identities" << std::endl;
     std::cout << "  - Router forwards messages to the specified destination" << std::endl;
     std::cout << std::endl;
@@ -284,7 +282,7 @@ int main()
     // Wait for threads
     clientA.join();
     clientB.join();
-    
+
     running = false;
     router.join();
 
