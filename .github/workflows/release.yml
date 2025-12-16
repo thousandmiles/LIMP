@@ -78,6 +78,10 @@ jobs:
       - name: Build package
         shell: powershell
         run: |
+          Write-Host "=== Checking build directory structure ==="
+          Get-ChildItem -Path build -Recurse | Select-Object FullName | Out-String -Width 200
+          Write-Host "=== Looking for toolchain files ==="
+          Get-ChildItem -Path build -Recurse -Filter "*.cmake" | Select-Object FullName
           $PKG = "dist/limp-${{ github.ref_name }}-windows-x64"
           New-Item -ItemType Directory -Force -Path "$PKG/lib","$PKG/include" | Out-Null
           cmake --preset release -G "Visual Studio 17 2022" -A x64
