@@ -250,7 +250,7 @@ namespace limp
                 }
             }
 
-            // ROUTER receives: [identity][delimiter][data]
+            // Dealer receives: [identity][delimiter][data]
             // We need at least 3 parts
             if (parts.size() < 3)
             {
