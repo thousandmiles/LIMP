@@ -145,27 +145,43 @@ cmake --preset test && cmake --build --preset test && ctest --preset test
 
 ### Running Examples
 
-After building with `release-all`:
+See [examples/README.md](examples/README.md) for comprehensive examples organized by pattern.
 
-**Linux:**
+**Quick start**:
 ```bash
-./build/examples/zmq_client_example
-./build/examples/zmq_server_example
-./build/examples/zmq_pubsub_example
-# ... and more
+# Basic LIMP usage (no network)
+./build/examples/01_basic/simple_request
+./build/examples/01_basic/simple_response
+
+# Request-Reply pattern (client-server)
+./build/examples/02_request_reply/server    # Terminal 1
+./build/examples/02_request_reply/client    # Terminal 2
+
+# Publish-Subscribe pattern
+./build/examples/03_pubsub/publisher_subscriber
+
+# Router-Dealer pattern
+./build/examples/04_router_dealer/router    # Terminal 1
+./build/examples/04_router_dealer/dealer    # Terminal 2
+
+# Message Broker pattern
+./build/examples/05_broker/proxy_broker     # Terminal 1
+./build/examples/05_broker/broker_node      # Terminal 2-N
 ```
 
-**Windows:**
-```powershell
-.\build\examples\zmq_client_example.exe
-.\build\examples\zmq_server_example.exe
-.\build\examples\zmq_pubsub_example.exe
-# ... and more
-```
+## Examples
 
-## API Examples
+Comprehensive examples demonstrating all features:
 
-[examples](./examples/)
+- **[01_basic/](examples/01_basic/)** - Basic LIMP message construction (no ZMQ)
+- **[02_request_reply/](examples/02_request_reply/)** - REQ-REP client-server pattern
+- **[03_pubsub/](examples/03_pubsub/)** - PUB-SUB broadcasting pattern
+- **[04_router_dealer/](examples/04_router_dealer/)** - Advanced async routing
+- **[05_broker/](examples/05_broker/)** - Message broker for N:N communication
+
+Each category includes detailed README files with usage instructions, code walkthroughs, and best practices.
+
+See [examples/README.md](examples/README.md) for complete documentation.
 
 ## License
 
