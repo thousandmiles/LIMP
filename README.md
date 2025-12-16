@@ -147,7 +147,7 @@ cmake --preset test && cmake --build --preset test && ctest --preset test
 
 See [examples/README.md](examples/README.md) for comprehensive examples organized by pattern.
 
-**Quick start**:
+**Linux/macOS:**
 ```bash
 # Basic LIMP usage (no network)
 ./build/examples/01_basic/simple_request
@@ -167,6 +167,29 @@ See [examples/README.md](examples/README.md) for comprehensive examples organize
 # Message Broker pattern
 ./build/examples/05_broker/proxy_broker     # Terminal 1
 ./build/examples/05_broker/broker_node      # Terminal 2-N
+```
+
+**Windows:**
+```powershell
+# Basic LIMP usage (no network)
+.\build\examples\01_basic\Release\simple_request.exe
+.\build\examples\01_basic\Release\simple_response.exe
+
+# Request-Reply pattern (client-server)
+.\build\examples\02_request_reply\Release\server.exe    # Terminal 1
+.\build\examples\02_request_reply\Release\client.exe    # Terminal 2
+
+# Publish-Subscribe pattern
+.\build\examples\03_pubsub\Release\publisher_subscriber.exe
+
+# Router-Dealer pattern
+.\build\examples\04_router_dealer\Release\router.exe    # Terminal 1
+.\build\examples\04_router_dealer\Release\dealer.exe    # Terminal 2
+
+# Message Broker pattern
+.\build\examples\05_broker\Release\proxy_broker.exe     # Terminal 1
+$env:NODE_TYPE="PLC"; .\build\examples\05_broker\Release\broker_node.exe  # Terminal 2
+$env:NODE_TYPE="HMI"; .\build\examples\05_broker\Release\broker_node.exe  # Terminal 3
 ```
 
 ## Examples
