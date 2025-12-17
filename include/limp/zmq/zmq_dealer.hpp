@@ -100,10 +100,12 @@ namespace limp
         bool connect(const std::string &endpoint);
 
         /**
-
-         * @brief Send a LIMP frame
+         * @brief Send a LIMP frame without routing
          *
-         * Serializes and sends a LIMP frame via DEALER socket.
+         * Sends a frame directly to the connected ROUTER. The ROUTER receives
+         * it as: [dealer_identity][delimiter][data] (3 parts).
+         *
+         * Pair with: router.receive(sourceIdentity, frame)
          *
          * @param frame Frame to send
          * @return true on success, false on failure
@@ -111,25 +113,31 @@ namespace limp
         bool send(const Frame &frame) override;
 
         /**
-         * @brief Send a LIMP frame to a specific destination node
+         * @brief Send a LIMP frame with explicit destination routing
          *
-         * Sends a message with destination identity for routing through
-         * a ROUTER-ROUTER proxy. The proxy will forward the message to
-         * the node with the specified identity.
+         * Sends a frame with destination identity for the ROUTER to forward.
+         * DEALER sends: [dest_identity][delimiter][data] (3 parts)
+         * ROUTER receives: [dealer_identity][dest_identity][delimiter][data] (4 parts)
          *
-         * @param destinationIdentity Target node's identity (e.g., "PLC-001")
+         * Pair with: router.receive(sourceIdentity, destinationIdentity, frame)
+         *
+         * @param destinationIdentity Target identity for routing
          * @param frame Frame to send
          * @return true on success, false on failure
          */
         bool send(const std::string &destinationIdentity, const Frame &frame);
 
         /**
-         * @brief Receive a LIMP frame
+         * @brief Receive a LIMP frame without source identity
          *
-         * Receives and deserializes a LIMP frame.
+         * Receives a frame sent by router.send(clientIdentity, frame).
+         * ROUTER sends: [dealer_identity][delimiter][data] (3 parts)
+         * DEALER receives: [delimiter][data] (2 parts, identity stripped by ZMQ)
+         *
+         * Pair with: router.send(clientIdentity, frame)
          *
          * @param frame Output frame
-         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
          * @return true on success, false on timeout or error
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
@@ -137,12 +145,15 @@ namespace limp
         /**
          * @brief Receive a LIMP frame with source identity
          *
-         * Receives a message routed through a ROUTER-ROUTER proxy, extracting
-         * both the source node's identity and the message frame.
+         * Receives a frame sent by router.send(clientIdentity, sourceIdentity, frame).
+         * ROUTER sends: [dealer_identity][source_identity][delimiter][data] (4 parts)
+         * DEALER receives: [source_identity][delimiter][data] (3 parts, client identity stripped by ZMQ)
          *
-         * @param sourceIdentity Output: sender's identity (e.g., "HMI-001")
+         * Pair with: router.send(clientIdentity, sourceIdentity, frame)
+         *
+         * @param sourceIdentity Output: sender's identity from router
          * @param frame Output frame
-         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
          * @return true on success, false on timeout or error
          */
         bool receive(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
@@ -155,9 +166,12 @@ namespace limp
         const std::string &getIdentity() const { return identity_; }
 
         /**
-         * @brief Send raw data
+         * @brief Send raw data without routing
          *
-         * Sends raw byte data as a multipart message with an empty delimiter frame.
+         * DEALER sends: [delimiter][data] (2 parts)
+         * ROUTER receives: [dealer_identity][delimiter][data] (3 parts, identity added by ZMQ)
+         *
+         * Pair with: router.receiveRaw(identity, buffer, maxSize)
          *
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
@@ -168,11 +182,12 @@ namespace limp
         /**
          * @brief Send raw data with routing
          *
-         * Sends raw byte data as a multipart message to a specific destination identity.
-         * This is used for routing messages through a ROUTER-ROUTER proxy.
-         * The message format is: [destination_identity][empty_delimiter][data].
+         * DEALER sends: [dest_identity][delimiter][data] (3 parts)
+         * ROUTER receives: [dealer_identity][dest_identity][delimiter][data] (4 parts, identity added by ZMQ)
          *
-         * @param destinationIdentity Target node's identity
+         * Pair with: router.receiveRaw(sourceIdentity, destinationIdentity, buffer, maxSize)
+         *
+         * @param destinationIdentity Target identity for routing
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
          * @return true on success, false on failure
@@ -182,9 +197,12 @@ namespace limp
                      size_t size);
 
         /**
-         * @brief Receive raw data
+         * @brief Receive raw data without source identity
          *
-         * Receives raw byte data from the socket.
+         * ROUTER sends: [client_identity][delimiter][data] (3 parts)
+         * DEALER receives: [delimiter][data] (2 parts, identity stripped by ZMQ)
+         *
+         * Pair with: router.sendRaw(clientIdentity, data, size)
          *
          * @param buffer Pointer to buffer to store received data
          * @param maxSize Maximum size of the buffer
@@ -195,11 +213,10 @@ namespace limp
         /**
          * @brief Receive raw data with source identity
          *
-         * Receives raw byte data from the socket along with the source identity.
-         * If the message is routed through a ROUTER, the identity of the original sender is extracted.
-         * The router explicitly adds the identity in the multipart message.
-         * The router message format is: [dealer_identity][source_identity][delimiter][data].
-         * The dealer received message format: [source_identity][delimiter][data].
+         * ROUTER sends: [client_identity][source_identity][delimiter][data] (4 parts)
+         * DEALER receives: [source_identity][delimiter][data] (3 parts, client_identity stripped by ZMQ)
+         *
+         * Pair with: router.sendRaw(clientIdentity, sourceIdentity, data, size)
          *
          * @param sourceIdentity Output: sender's identity
          * @param buffer Pointer to buffer to store received data

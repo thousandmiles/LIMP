@@ -84,14 +84,17 @@ namespace limp
         bool bind(const std::string &endpoint);
 
         /**
-         * @brief Receive a LIMP frame from client
+         * @brief Receive a LIMP frame with source identity only
          *
-         * Receives and deserializes a LIMP frame along with the sender's identity.
-         * Use this when clients send messages without destination (dealer.send()).
+         * Receives a frame sent by dealer.send(frame) without destination routing.
+         * DEALER sends: [delimiter][data] (2 parts)
+         * ROUTER receives: [dealer_identity][delimiter][data] (3 parts, identity added by ZMQ)
+         *
+         * Pair with: dealer.send(frame)
          *
          * @param sourceIdentity Output: sender's identity
          * @param frame Output: received frame
-         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
          * @return true on success, false on timeout or error
          */
         bool receive(std::string &sourceIdentity,
@@ -101,14 +104,16 @@ namespace limp
         /**
          * @brief Receive a LIMP frame with source and destination identities
          *
-         * Receives and deserializes a LIMP frame, extracting both the sender's
-         * identity and the intended destination identity. Use this when clients
-         * send messages with destination (dealer.send(dest, frame)).
+         * Receives a frame sent by dealer.send(dest, frame) with destination routing.
+         * DEALER sends: [dest_identity][delimiter][data] (3 parts)
+         * ROUTER receives: [dealer_identity][dest_identity][delimiter][data] (4 parts)
+         *
+         * Pair with: dealer.send(destinationIdentity, frame)
          *
          * @param sourceIdentity Output: sender's identity
-         * @param destinationIdentity Output: intended recipient's identity (empty if not specified)
+         * @param destinationIdentity Output: intended recipient's identity
          * @param frame Output: received frame
-         * @param timeoutMs Timeout in milliseconds (uses socket config if -1)
+         * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
          * @return true on success, false on timeout or error
          */
         bool receive(std::string &sourceIdentity,
@@ -117,12 +122,15 @@ namespace limp
                      int timeoutMs = -1);
 
         /**
-         * @brief Send a LIMP frame to a specific client
+         * @brief Send a LIMP frame to a specific client without source identity
          *
-         * Serializes and sends a LIMP frame to the client with the specified identity.
-         * The identity should be obtained from a previous receive() call.
+         * Sends a frame to the specified client.
+         * ROUTER sends: [client_identity][delimiter][data] (3 parts)
+         * DEALER receives: [delimiter][data] (2 parts, identity stripped by ZMQ)
          *
-         * @param clientIdentity Client identity to send to
+         * Pair with: dealer.receive(frame)
+         *
+         * @param clientIdentity Target client identity
          * @param frame Frame to send
          * @return true on success, false on failure
          */
@@ -131,10 +139,13 @@ namespace limp
         /**
          * @brief Send a LIMP frame to a specific client with source identity
          *
-         * Serializes and sends a LIMP frame to the client with the specified identity.
-         * The identity should be obtained from a previous receive() call.
+         * Sends a frame to the specified client including source identity for tracking.
+         * ROUTER sends: [client_identity][source_identity][delimiter][data] (4 parts)
+         * DEALER receives: [source_identity][delimiter][data] (3 parts, client identity stripped by ZMQ)
          *
-         * @param clientIdentity Client identity to send to
+         * Pair with: dealer.receive(sourceIdentity, frame)
+         *
+         * @param clientIdentity Target client identity
          * @param sourceIdentity Source identity representing the sender
          * @param frame Frame to send
          * @return true on success, false on failure
@@ -149,15 +160,18 @@ namespace limp
 
         /**
          * @brief Not supported for router (use identity-based receive)
+         * @param timeoutMs Ignored
          * @return false
          */
         bool receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Receive raw multipart message
+         * @brief Receive raw data without destination routing
          *
-         * Receives raw byte data from the socket along with source identity.
-         * Message format: [source_identity][delimiter][data].
+         * DEALER sends: [delimiter][data] (2 parts)
+         * ROUTER receives: [dealer_identity][delimiter][data] (3 parts, identity added by ZMQ)
+         *
+         * Pair with: dealer.sendRaw(data, size)
          *
          * @param identity Output: sender's identity
          * @param buffer Pointer to buffer to store received data
@@ -169,10 +183,12 @@ namespace limp
                                   size_t maxSize);
 
         /**
-         * @brief Receive raw data for 4-frame routing messages
+         * @brief Receive raw data with destination routing
          *
-         * Receives raw byte data from the socket along with source and destination identities.
-         * Message format: [source_identity][destination_identity][delimiter][data].
+         * DEALER sends: [dest_identity][delimiter][data] (3 parts)
+         * ROUTER receives: [dealer_identity][dest_identity][delimiter][data] (4 parts, identity added by ZMQ)
+         *
+         * Pair with: dealer.sendRaw(destinationIdentity, data, size)
          *
          * @param sourceIdentity Output: sender's identity
          * @param destinationIdentity Output: intended recipient's identity
@@ -186,10 +202,12 @@ namespace limp
                                   size_t maxSize);
 
         /**
-         * @brief Send raw data to client
+         * @brief Send raw data without source identity
          *
-         * Sends raw byte data as a multipart message to a specific client identity.
-         * Message format: [identity][delimiter][data].
+         * ROUTER sends: [client_identity][delimiter][data] (3 parts)
+         * DEALER receives: [delimiter][data] (2 parts, identity stripped by ZMQ)
+         *
+         * Pair with: dealer.receiveRaw(buffer, maxSize)
          *
          * @param clientIdentity Target client identity
          * @param data Pointer to data buffer
@@ -201,10 +219,12 @@ namespace limp
                      size_t size);
 
         /**
-         * @brief Send raw data to client with source identity
+         * @brief Send raw data with source identity
          *
-         * Sends raw byte data as a multipart message to a specific client identity.
-         * Message format: [clientIdentity][sourceIdentity][delimiter][data].
+         * ROUTER sends: [client_identity][source_identity][delimiter][data] (4 parts)
+         * DEALER receives: [source_identity][delimiter][data] (3 parts, client_identity stripped by ZMQ)
+         *
+         * Pair with: dealer.receiveRaw(sourceIdentity, buffer, maxSize)
          *
          * @param clientIdentity Target client identity
          * @param sourceIdentity Source identity representing the sender
