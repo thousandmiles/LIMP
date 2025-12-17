@@ -32,10 +32,12 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <mutex>
 
 using namespace limp;
 
 std::atomic<bool> running{true};
+std::mutex coutMutex;  // Mutex for synchronized console output
 
 // Helper function to convert binary identity to hex string for display
 std::string identityToHex(const std::string &identity)
@@ -58,7 +60,10 @@ void signalHandler(int signal)
 // Router that forwards messages based on explicit destination
 void routerThread()
 {
-    std::cout << "[Router] Starting direct routing server..." << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[Router] Starting direct routing server..." << std::endl;
+    }
 
     ZMQConfig config;
     config.receiveTimeout = 1000;
@@ -66,16 +71,23 @@ void routerThread()
 
     ZMQRouter router(config);
     router.setErrorCallback([](const std::string &msg)
-                            { std::cerr << "[Router] Error: " << msg << std::endl; });
+                            { 
+                                std::lock_guard<std::mutex> lock(coutMutex);
+                                std::cerr << "[Router] Error: " << msg << std::endl; 
+                            });
 
     if (!router.bind("tcp://*:5555"))
     {
+        std::lock_guard<std::mutex> lock(coutMutex);
         std::cerr << "[Router] Failed to bind" << std::endl;
         return;
     }
 
-    std::cout << "[Router] Listening on tcp://*:5555" << std::endl;
-    std::cout << "[Router] Ready to route messages between clients" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[Router] Listening on tcp://*:5555" << std::endl;
+        std::cout << "[Router] Ready to route messages between clients" << std::endl;
+    }
 
     // Track client identities
     std::map<uint16_t, std::string> nodeRegistry; // nodeID -> socket identity
@@ -95,42 +107,36 @@ void routerThread()
             if (nodeRegistry.find(srcNodeId) == nodeRegistry.end())
             {
                 nodeRegistry[srcNodeId] = sourceIdentity;
-                std::cout << "[Router] Registered node 0x" << std::hex << srcNodeId
-                          << " with identity: 0x" << identityToHex(sourceIdentity) << std::dec << std::endl;
+                std::lock_guard<std::mutex> lock(coutMutex);
+                std::cout << "[Router] Registered " << sourceIdentity << " (node 0x" << std::hex << srcNodeId << std::dec << ")" << std::endl;
             }
 
-            std::cout << "[Router] Routing message:" << std::endl;
-            std::cout << "  From: Node 0x" << std::hex << srcNodeId
-                      << " (identity: 0x" << identityToHex(sourceIdentity) << ")" << std::dec << std::endl;
-            std::cout << "  To: (requested dest: 0x" << identityToHex(destinationIdentity) << ")" << std::endl;
-            std::cout << "  Type: " << static_cast<int>(frame.msgType) << std::dec << std::endl;
-
-            // The destination identity is provided by the sender in send(dest, frame)
-            // We could use it directly or look up in registry
-            // For now, forward to the requested destination identity
+            // Forward to the destination identity that the client specified
             if (!destinationIdentity.empty())
             {
-                std::cout << "  Forwarding to destination identity: 0x" << identityToHex(destinationIdentity) << std::endl;
-
-                if (router.send(destinationIdentity, frame))
+                if (router.send(destinationIdentity, sourceIdentity, frame))
                 {
-                    std::cout << "  ✓ Routed successfully" << std::endl;
+                    std::lock_guard<std::mutex> lock(coutMutex);
+                    std::cout << "[Router] Routed from " << sourceIdentity << " to " << destinationIdentity << std::endl;
                 }
                 else
                 {
-                    std::cerr << "  ✗ Failed to forward message" << std::endl;
+                    std::lock_guard<std::mutex> lock(coutMutex);
+                    std::cerr << "[Router] Failed to route from " << sourceIdentity << " to " << destinationIdentity << std::endl;
                 }
             }
             else
             {
-                std::cerr << "  ✗ No destination identity specified" << std::endl;
+                std::lock_guard<std::mutex> lock(coutMutex);
+                std::cerr << "[Router] No destination specified from " << sourceIdentity << std::endl;
             }
-
-            std::cout << std::endl;
         }
     }
 
-    std::cout << "[Router] Shutting down..." << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[Router] Shutting down..." << std::endl;
+    }
 }
 
 // Client node using send(dst, frame) for direct routing
@@ -138,8 +144,10 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
 {
     std::this_thread::sleep_for(std::chrono::seconds(delaySeconds));
 
-    std::cout << "[" << name << "] Starting client (node 0x" << std::hex << nodeId
-              << ")" << std::dec << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[" << name << "] Starting (node 0x" << std::hex << nodeId << std::dec << ")" << std::endl;
+    }
 
     ZMQConfig config;
     config.receiveTimeout = 1000;
@@ -147,15 +155,31 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
 
     ZMQDealer dealer(config);
     dealer.setErrorCallback([name](const std::string &msg)
-                            { std::cerr << "[" << name << "] Error: " << msg << std::endl; });
+                            { 
+                                std::lock_guard<std::mutex> lock(coutMutex);
+                                std::cerr << "[" << name << "] Error: " << msg << std::endl; 
+                            });
+
+    // Set explicit identity so other clients can address this client
+    std::string myIdentity = "CLIENT_" + std::to_string(nodeId);
+    if (!dealer.setIdentity(myIdentity))
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cerr << "[" << name << "] Failed to set identity" << std::endl;
+        return;
+    }
 
     if (!dealer.connect("tcp://localhost:5555"))
     {
+        std::lock_guard<std::mutex> lock(coutMutex);
         std::cerr << "[" << name << "] Failed to connect" << std::endl;
         return;
     }
 
-    std::cout << "[" << name << "] Connected to router" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[" << name << "] Connected with identity: " << myIdentity << std::endl;
+    }
 
     // Send registration message using send(dst, frame) to router ("ROUTER" identity)
     Frame regFrame = MessageBuilder()
@@ -170,6 +194,7 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
     // Use "ROUTER" as the destination for registration
     if (dealer.send("ROUTER", regFrame))
     {
+        std::lock_guard<std::mutex> lock(coutMutex);
         std::cout << "[" << name << "] Sent registration to ROUTER" << std::endl;
     }
 
@@ -193,59 +218,68 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
                           .setPayload(payloadBytes)
                           .build();
 
-        // Convert targetNodeId to string for destination identity
-        // Note: In practice, you'd use actual socket identities
-        std::string destIdentity = "Node_" + std::to_string(targetNodeId);
-
-        std::cout << "[" << name << "] Sending to destination: " << destIdentity << std::endl;
+        // Use the target client's known identity
+        // Since we set explicit identities, we can address them directly
+        std::string destIdentity = "CLIENT_" + std::to_string(targetNodeId);
 
         if (dealer.send(destIdentity, frame))
         {
             messageCount++;
-            std::cout << "[" << name << "] Sent message #" << messageCount
-                      << " to node 0x" << std::hex << targetNodeId << std::dec << std::endl;
+            std::lock_guard<std::mutex> lock(coutMutex);
+            std::cout << "[" << name << "] Sent #" << messageCount << " to " << destIdentity 
+                      << " (target 0x" << std::hex << targetNodeId << std::dec << ")" << std::endl;
         }
         else
         {
-            std::cerr << "[" << name << "] Failed to send message" << std::endl;
+            std::lock_guard<std::mutex> lock(coutMutex);
+            std::cerr << "[" << name << "] Failed to send" << std::endl;
         }
 
         // Try to receive responses
         Frame response;
-        if (dealer.receive(response, 1000))
+        std::string sourceIdentity;
+        if (dealer.receive(sourceIdentity, response, 1000))
         {
             receivedCount++;
             std::string receivedPayload(response.payload.begin(),
                                         response.payload.end());
-            std::cout << "[" << name << "] ← Received response #" << receivedCount
-                      << " from node 0x" << std::hex << response.srcNodeID
-                      << std::dec << ": " << receivedPayload << std::endl;
+            std::lock_guard<std::mutex> lock(coutMutex);
+            std::cout << "[" << name << "] Received #" << receivedCount
+                      << " from " << sourceIdentity << " (node 0x" << std::hex << response.srcNodeID 
+                      << std::dec << "): " << receivedPayload << std::endl;
         }
 
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
 
     // Wait for remaining responses
-    std::cout << "[" << name << "] Sent all messages, waiting for remaining responses..." << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[" << name << "] Waiting for remaining responses..." << std::endl;
+    }
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 
     while (running && receivedCount < messageCount && std::chrono::steady_clock::now() < timeout)
     {
         Frame response;
-        if (dealer.receive(response, 1000))
+        std::string sourceIdentity;
+        if (dealer.receive(sourceIdentity, response, 1000))
         {
             receivedCount++;
             std::string receivedPayload(response.payload.begin(),
                                         response.payload.end());
-            std::cout << "[" << name << "] ← Received response #" << receivedCount
-                      << " from node 0x" << std::hex << response.srcNodeID
-                      << std::dec << ": " << receivedPayload << std::endl;
+            std::lock_guard<std::mutex> lock(coutMutex);
+            std::cout << "[" << name << "] Received #" << receivedCount
+                      << " from " << sourceIdentity << " (node 0x" << std::hex << response.srcNodeID 
+                      << std::dec << "): " << receivedPayload << std::endl;
         }
     }
 
-    std::cout << "[" << name << "] Final stats: sent=" << messageCount
-              << ", received=" << receivedCount << std::endl;
-    std::cout << "[" << name << "] Shutting down..." << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(coutMutex);
+        std::cout << "[" << name << "] Stats: sent=" << messageCount
+                  << ", received=" << receivedCount << std::endl;
+    }
 }
 
 int main()
