@@ -52,12 +52,11 @@ namespace limp
 
                 if (!result)
                 {
-                    return 0; // Timeout
+                    return 0;
                 }
 
                 parts.push_back(std::move(msg));
 
-                // Check if more parts are coming
                 auto more = socket_->get(zmq::sockopt::rcvmore);
                 if (!more)
                 {
@@ -65,22 +64,17 @@ namespace limp
                 }
             }
 
-            // ROUTER receives: [identity][delimiter][data]
-            // We need at least 3 parts
-            if (parts.size() < 3)
+            if (parts.size() != 3)
             {
-                handleError(zmq::error_t(), "router receive: incomplete message");
+                handleError(zmq::error_t(), "router receive: expected 3 parts, got " + std::to_string(parts.size()));
                 return -1;
             }
 
-            // Extract identity (first part)
             const auto &identityMsg = parts[0];
             identity.assign(static_cast<const uint8_t *>(identityMsg.data()),
                             static_cast<const uint8_t *>(identityMsg.data()) + identityMsg.size());
 
-            // Skip delimiter (second part - empty frame)
-            // Extract data (last part)
-            const auto &dataMsg = parts.back();
+            const auto &dataMsg = parts[2];
             size_t receivedSize = dataMsg.size();
 
             if (receivedSize > maxSize)
@@ -114,7 +108,6 @@ namespace limp
             return false;
         }
 
-        // Convert identity to string
         sourceIdentity = std::string(identityVec.begin(), identityVec.end());
 
         buffer.resize(static_cast<size_t>(received));
@@ -143,7 +136,7 @@ namespace limp
 
                 if (!result)
                 {
-                    return 0; // Timeout
+                    return 0;
                 }
 
                 parts.push_back(std::move(msg));
@@ -156,30 +149,21 @@ namespace limp
                 }
             }
 
-            // ROUTER receives with destination routing from DEALER send(dst, frame):
-            // - DEALER sends: [dest_identity][delimiter][data] (3 parts)
-            // - ROUTER prepends source identity: [source_identity][dest_identity][delimiter][data] (4 parts)
-            // We need at least 4 parts for routed messages
-            if (parts.size() < 4)
+            if (parts.size() != 4)
             {
-                handleError(zmq::error_t(), "router receive: incomplete routed message");
+                handleError(zmq::error_t(), "router receive: expected 4 parts, got " + std::to_string(parts.size()));
                 return -1;
             }
 
-            // Extract source identity (first part - auto-added by ROUTER)
             const auto &srcIdentityMsg = parts[0];
             sourceIdentity.assign(static_cast<const uint8_t *>(srcIdentityMsg.data()),
                                   static_cast<const uint8_t *>(srcIdentityMsg.data()) + srcIdentityMsg.size());
 
-            // Extract destination identity (second part - from dealer's send(dst, frame))
             const auto &destIdentityMsg = parts[1];
             destinationIdentity.assign(static_cast<const uint8_t *>(destIdentityMsg.data()),
                                        static_cast<const uint8_t *>(destIdentityMsg.data()) + destIdentityMsg.size());
 
-            // Skip delimiter (third part - empty frame)
-
-            // Extract data (fourth/last part)
-            const auto &dataMsg = parts.back();
+            const auto &dataMsg = parts[3];
             size_t receivedSize = dataMsg.size();
 
             if (receivedSize > maxSize)
@@ -216,7 +200,6 @@ namespace limp
             return false;
         }
 
-        // Convert identities to strings
         sourceIdentity = std::string(srcIdentityVec.begin(), srcIdentityVec.end());
         destinationIdentity = std::string(destIdentityVec.begin(), destIdentityVec.end());
 
@@ -235,7 +218,6 @@ namespace limp
 
         try
         {
-            // Send identity frame
             zmq::message_t identityMsg(identity.data(), identity.size());
             auto identityResult = socket_->send(identityMsg, zmq::send_flags::sndmore);
             if (!identityResult)
@@ -243,7 +225,6 @@ namespace limp
                 return false;
             }
 
-            // Send delimiter frame (empty)
             zmq::message_t delimiterMsg;
             auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
             if (!delimiterResult)
@@ -251,7 +232,6 @@ namespace limp
                 return false;
             }
 
-            // Send data frame
             zmq::message_t dataMsg(data, size);
             auto dataResult = socket_->send(dataMsg, zmq::send_flags::none);
             return dataResult.has_value();
@@ -275,7 +255,6 @@ namespace limp
 
         try
         {
-            // Send client identity frame
             zmq::message_t clientIdentityMsg(clientIdentity.data(), clientIdentity.size());
             auto clientIdentityResult = socket_->send(clientIdentityMsg, zmq::send_flags::sndmore);
             if (!clientIdentityResult)
@@ -283,7 +262,6 @@ namespace limp
                 return false;
             }
 
-            // Send source identity frame
             zmq::message_t sourceIdentityMsg(sourceIdentity.data(), sourceIdentity.size());
             auto sourceIdentityResult = socket_->send(sourceIdentityMsg, zmq::send_flags::sndmore);
             if (!sourceIdentityResult)
@@ -291,7 +269,6 @@ namespace limp
                 return false;
             }
 
-            // Send delimiter frame (empty)
             zmq::message_t delimiterMsg;
             auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
             if (!delimiterResult)
@@ -299,7 +276,6 @@ namespace limp
                 return false;
             }
 
-            // Send data frame
             zmq::message_t dataMsg(data, size);
             auto dataResult = socket_->send(dataMsg, zmq::send_flags::none);
             return dataResult.has_value();
@@ -319,7 +295,6 @@ namespace limp
             return false;
         }
 
-        // Convert string identity to vector<uint8_t>
         std::vector<uint8_t> identityVec(clientIdentity.begin(), clientIdentity.end());
         return sendRaw(identityVec, buffer.data(), buffer.size());
     }
@@ -334,7 +309,6 @@ namespace limp
             return false;
         }
 
-        // Convert string identities to vector<uint8_t>
         std::vector<uint8_t> clientIdentityVec(clientIdentity.begin(), clientIdentity.end());
         std::vector<uint8_t> sourceIdentityVec(sourceIdentity.begin(), sourceIdentity.end());
 

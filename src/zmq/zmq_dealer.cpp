@@ -66,8 +66,6 @@ namespace limp
 
         try
         {
-            // For direct ROUTER-DEALER communication: send [empty_delimiter][data]
-            // Send empty delimiter first
             zmq::message_t delimiterMsg;
             auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
             if (!delimiterResult)
@@ -75,7 +73,6 @@ namespace limp
                 return false;
             }
 
-            // Send data
             zmq::message_t dataMsg(data, size);
             auto result = socket_->send(dataMsg, zmq::send_flags::none);
             return result.has_value();
@@ -96,11 +93,6 @@ namespace limp
 
         try
         {
-            // DEALER receives multi-part messages from ROUTER
-            // Format after ROUTER strips our identity: [delimiter][data]
-            // We need to skip the delimiter and read the data part
-
-            // Receive all message parts
             std::vector<zmq::message_t> parts;
             while (true)
             {
@@ -109,12 +101,11 @@ namespace limp
 
                 if (!result)
                 {
-                    return 0; // Timeout
+                    return 0;
                 }
 
                 parts.push_back(std::move(msg));
 
-                // Check if more parts are coming
                 auto more = socket_->get(zmq::sockopt::rcvmore);
                 if (!more)
                 {
@@ -122,9 +113,13 @@ namespace limp
                 }
             }
 
-            // If single-part message, it's the data directly
-            // If multi-part message, last part is the data (skip delimiter)
-            const auto &dataMsg = parts.back();
+            if (parts.size() != 2)
+            {
+                handleError(zmq::error_t(), "dealer receive: expected 2 parts, got " + std::to_string(parts.size()));
+                return -1;
+            }
+
+            const auto &dataMsg = parts[1];
             size_t receivedSize = dataMsg.size();
 
             if (receivedSize > maxSize)
@@ -164,8 +159,6 @@ namespace limp
 
         try
         {
-            // Send multipart message: [destination_identity][empty delimiter][data]
-            // The empty delimiter is required by ZeroMQ ROUTER envelope protocol
             zmq::message_t destMsg(destinationIdentity.data(), destinationIdentity.size());
             zmq::message_t emptyMsg;
             zmq::message_t dataMsg(data, size);
@@ -234,12 +227,11 @@ namespace limp
 
                 if (!result)
                 {
-                    return 0; // Timeout
+                    return 0;
                 }
 
                 parts.push_back(std::move(msg));
 
-                // Check if more parts are coming
                 auto more = socket_->get(zmq::sockopt::rcvmore);
                 if (!more)
                 {
@@ -247,22 +239,17 @@ namespace limp
                 }
             }
 
-            // Dealer receives: [identity][delimiter][data]
-            // We need at least 3 parts
-            if (parts.size() < 3)
+            if (parts.size() != 3)
             {
-                handleError(zmq::error_t(), "dealer receive: incomplete message");
+                handleError(zmq::error_t(), "dealer receive: expected 3 parts, got " + std::to_string(parts.size()));
                 return -1;
             }
 
-            // Extract identity (first part)
             const auto &identityMsg = parts[0];
             sourceIdentity.assign(static_cast<const uint8_t *>(identityMsg.data()),
                                   static_cast<const uint8_t *>(identityMsg.data()) + identityMsg.size());
 
-            // Skip delimiter (second part - empty frame)
-            // Extract data (last part)
-            const auto &dataMsg = parts.back();
+            const auto &dataMsg = parts[2];
             size_t receivedSize = dataMsg.size();
 
             if (receivedSize > maxSize)
