@@ -76,10 +76,11 @@ void routerThread()
                                 std::cerr << "[Router] Error: " << msg << std::endl; 
                             });
 
-    if (!router.bind("tcp://*:5555"))
+    auto bindErr = router.bind("tcp://*:5555");
+    if (bindErr != TransportError::None)
     {
         std::lock_guard<std::mutex> lock(coutMutex);
-        std::cerr << "[Router] Failed to bind" << std::endl;
+        std::cerr << "[Router] Failed to bind: " << toString(bindErr) << std::endl;
         return;
     }
 
@@ -99,7 +100,8 @@ void routerThread()
         Frame frame;
 
         // Receive message with source and destination
-        if (router.receive(sourceIdentity, destinationIdentity, frame, 1000))
+        auto recvErr = router.receive(sourceIdentity, destinationIdentity, frame, 1000);
+        if (recvErr == TransportError::None)
         {
             uint16_t srcNodeId = frame.srcNodeID;
 
@@ -114,7 +116,8 @@ void routerThread()
             // Forward to the destination identity that the client specified
             if (!destinationIdentity.empty())
             {
-                if (router.send(destinationIdentity, sourceIdentity, frame))
+                auto sendErr = router.send(destinationIdentity, sourceIdentity, frame);
+                if (sendErr == TransportError::None)
                 {
                     std::lock_guard<std::mutex> lock(coutMutex);
                     std::cout << "[Router] Routed from " << sourceIdentity << " to " << destinationIdentity << std::endl;
@@ -162,17 +165,19 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
 
     // Set explicit identity so other clients can address this client
     std::string myIdentity = "CLIENT_" + std::to_string(nodeId);
-    if (!dealer.setIdentity(myIdentity))
+    auto idErr = dealer.setIdentity(myIdentity);
+    if (idErr != TransportError::None)
     {
         std::lock_guard<std::mutex> lock(coutMutex);
-        std::cerr << "[" << name << "] Failed to set identity" << std::endl;
+        std::cerr << "[" << name << "] Failed to set identity: " << toString(idErr) << std::endl;
         return;
     }
 
-    if (!dealer.connect("tcp://localhost:5555"))
+    auto connectErr = dealer.connect("tcp://localhost:5555");
+    if (connectErr != TransportError::None)
     {
         std::lock_guard<std::mutex> lock(coutMutex);
-        std::cerr << "[" << name << "] Failed to connect" << std::endl;
+        std::cerr << "[" << name << "] Failed to connect: " << toString(connectErr) << std::endl;
         return;
     }
 
@@ -192,7 +197,8 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
                          .build();
 
     // Use "ROUTER" as the destination for registration
-    if (dealer.send("ROUTER", regFrame))
+    auto sendErr = dealer.send("ROUTER", regFrame);
+    if (sendErr == TransportError::None)
     {
         std::lock_guard<std::mutex> lock(coutMutex);
         std::cout << "[" << name << "] Sent registration to ROUTER" << std::endl;
@@ -222,7 +228,8 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
         // Since we set explicit identities, we can address them directly
         std::string destIdentity = "CLIENT_" + std::to_string(targetNodeId);
 
-        if (dealer.send(destIdentity, frame))
+        auto sendErr = dealer.send(destIdentity, frame);
+        if (sendErr == TransportError::None)
         {
             messageCount++;
             std::lock_guard<std::mutex> lock(coutMutex);
@@ -238,7 +245,8 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
         // Try to receive responses
         Frame response;
         std::string sourceIdentity;
-        if (dealer.receive(sourceIdentity, response, 1000))
+        auto recvErr = dealer.receive(sourceIdentity, response, 1000);
+        if (recvErr == TransportError::None)
         {
             receivedCount++;
             std::string receivedPayload(response.payload.begin(),
@@ -263,7 +271,8 @@ void clientThread(const std::string &name, uint16_t nodeId, uint16_t targetNodeI
     {
         Frame response;
         std::string sourceIdentity;
-        if (dealer.receive(sourceIdentity, response, 1000))
+        auto recvErr = dealer.receive(sourceIdentity, response, 1000);
+        if (recvErr == TransportError::None)
         {
             receivedCount++;
             std::string receivedPayload(response.payload.begin(),

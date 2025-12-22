@@ -36,9 +36,10 @@ int main()
     std::string endpoint = "tcp://127.0.0.1:5555";
     std::cout << "Connecting to " << endpoint << "..." << std::endl;
 
-    if (!client.connect(endpoint))
+    auto connectErr = client.connect(endpoint);
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "Failed to connect to server" << std::endl;
+        std::cerr << "Failed to connect: " << toString(connectErr) << std::endl;
         return 1;
     }
 
@@ -63,9 +64,10 @@ int main()
 
         std::cout << "Sending request (" << requestFrame.totalSize() << " bytes)..." << std::endl;
 
-        if (!client.send(requestFrame))
+        auto sendErr = client.send(requestFrame);
+        if (sendErr != TransportError::None)
         {
-            std::cerr << "Failed to send request" << std::endl;
+            std::cerr << "Failed to send request: " << toString(sendErr) << std::endl;
             continue;
         }
 
@@ -73,9 +75,10 @@ int main()
         Frame responseFrame;
         std::cout << "Waiting for response..." << std::endl;
 
-        if (!client.receive(responseFrame))
+        auto recvErr = client.receive(responseFrame);
+        if (recvErr != TransportError::None)
         {
-            std::cerr << "Failed to receive response" << std::endl;
+            std::cerr << "Failed to receive response: " << toString(recvErr) << std::endl;
             continue;
         }
 

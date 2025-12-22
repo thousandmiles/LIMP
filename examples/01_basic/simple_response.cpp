@@ -10,21 +10,22 @@ int main()
 
     // Simulate different types of responses
 
-    // 1. Tag Quality Response (UINT8)
-    std::cout << "1. Tag Quality Response\n";
-    auto qualityResp = MessageBuilder::response(
+    // 1. Tag Value Response (UINT8 - application-defined value)
+    std::cout << "1. Tag Value Response\n";
+    uint8_t tagValue = 42; // Application-defined tag value
+    auto valueResp = MessageBuilder::response(
                            0x0030,
                            0x3000,
                            10,
-                           0x0002)
-                           .setPayload(static_cast<uint8_t>(Quality::Good))
+                           0x0001) // AttrID 0x0001 for value
+                           .setPayload(tagValue)
                            .enableCRC();
 
-    Frame qFrame = qualityResp.build();
-    MessageParser qParser(qFrame);
-    if (auto qual = qParser.getUInt8())
+    Frame vFrame = valueResp.build();
+    MessageParser vParser(vFrame);
+    if (auto val = vParser.getUInt8())
     {
-        std::cout << "   Quality: " << toString(static_cast<Quality>(*qual)) << "\n\n";
+        std::cout << "   Value: " << static_cast<int>(*val) << "\n\n";
     }
 
     // 2. Tag Timestamp Response (UINT64)

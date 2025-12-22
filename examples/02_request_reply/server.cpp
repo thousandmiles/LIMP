@@ -49,9 +49,10 @@ int main()
     std::string endpoint = "tcp://*:5555";
     std::cout << "Binding to " << endpoint << "..." << std::endl;
 
-    if (!server.bind(endpoint))
+    auto bindErr = server.bind(endpoint);
+    if (bindErr != TransportError::None)
     {
-        std::cerr << "Failed to bind to endpoint" << std::endl;
+        std::cerr << "Failed to bind: " << toString(bindErr) << std::endl;
         return 1;
     }
 
@@ -66,7 +67,8 @@ int main()
     {
         // Receive request
         Frame requestFrame;
-        if (!server.receive(requestFrame))
+        auto recvErr = server.receive(requestFrame);
+        if (recvErr != TransportError::None)
         {
             // Timeout - check if we should continue
             continue;
@@ -107,9 +109,10 @@ int main()
 
         std::cout << "Sending response (" << responseFrame.totalSize() << " bytes)..." << std::endl;
 
-        if (!server.send(responseFrame))
+        auto sendErr = server.send(responseFrame);
+        if (sendErr != TransportError::None)
         {
-            std::cerr << "Failed to send response" << std::endl;
+            std::cerr << "Failed to send response: " << toString(sendErr) << std::endl;
             continue;
         }
 

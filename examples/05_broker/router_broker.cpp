@@ -74,9 +74,10 @@ int main()
     std::string endpoint = "tcp://0.0.0.0:5555";
     std::cout << "Starting router server on " << endpoint << std::endl;
 
-    if (!router.bind(endpoint))
+    auto bindErr = router.bind(endpoint);
+    if (bindErr != TransportError::None)
     {
-        std::cerr << "Failed to bind to " << endpoint << std::endl;
+        std::cerr << "Failed to bind: " << toString(bindErr) << std::endl;
         return 1;
     }
 
@@ -105,7 +106,8 @@ int main()
         Frame incomingFrame;
 
         // Receive message from any client
-        if (!router.receive(sourceIdentity, incomingFrame, 1000))
+        auto recvErr = router.receive(sourceIdentity, incomingFrame, 1000);
+        if (recvErr != TransportError::None)
         {
             continue; // Timeout, check if still running
         }

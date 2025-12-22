@@ -55,9 +55,10 @@ int main()
 
     // Set custom identity (optional - ZeroMQ will generate one if not set)
     std::string identity = "DEALER-HMI-001";
-    if (!dealer.setIdentity(identity))
+    auto idErr = dealer.setIdentity(identity);
+    if (idErr != TransportError::None)
     {
-        std::cerr << "Warning: Could not set identity" << std::endl;
+        std::cerr << "Warning: Could not set identity: " << toString(idErr) << std::endl;
     }
     else
     {
@@ -68,9 +69,10 @@ int main()
     std::string endpoint = "tcp://127.0.0.1:5555";
     std::cout << "Connecting to router at " << endpoint << "..." << std::endl;
 
-    if (!dealer.connect(endpoint))
+    auto connectErr = dealer.connect(endpoint);
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "Failed to connect to endpoint" << std::endl;
+        std::cerr << "Failed to connect: " << toString(connectErr) << std::endl;
         return 1;
     }
 
@@ -97,9 +99,10 @@ int main()
                                  .build();
 
         // Send the request (no need to wait for response immediately)
-        if (!dealer.send(requestFrame))
+        auto sendErr = dealer.send(requestFrame);
+        if (sendErr != TransportError::None)
         {
-            std::cerr << "Failed to send request" << std::endl;
+            std::cerr << "Failed to send request: " << toString(sendErr) << std::endl;
             continue;
         }
 
@@ -107,7 +110,8 @@ int main()
 
         // Try to receive response (asynchronous - may timeout)
         Frame responseFrame;
-        if (dealer.receive(responseFrame, 1000))
+        auto recvErr = dealer.receive(responseFrame, 1000);
+        if (recvErr == TransportError::None)
         {
             responseCount++;
 

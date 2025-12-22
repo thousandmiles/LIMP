@@ -35,9 +35,10 @@ void publisherThread()
     ZMQPublisher publisher(config);
 
     // Bind to endpoint
-    if (!publisher.bind("tcp://*:5556"))
+    auto bindErr = publisher.bind("tcp://*:5556");
+    if (bindErr != TransportError::None)
     {
-        std::cerr << "[Publisher] Failed to bind" << std::endl;
+        std::cerr << "[Publisher] Failed to bind: " << toString(bindErr) << std::endl;
         return;
     }
 
@@ -112,18 +113,20 @@ void subscriberThread(const std::string &topic)
     ZMQSubscriber subscriber(config);
 
     // Connect to publisher
-    if (!subscriber.connect("tcp://127.0.0.1:5556"))
+    auto connectErr = subscriber.connect("tcp://127.0.0.1:5556");
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "[Subscriber " << topic << "] Failed to connect" << std::endl;
+        std::cerr << "[Subscriber " << topic << "] Failed to connect: " << toString(connectErr) << std::endl;
         return;
     }
 
     std::cout << "[Subscriber " << topic << "] Connected to tcp://127.0.0.1:5556" << std::endl;
 
     // Subscribe to topic
-    if (!subscriber.subscribe(topic))
+    auto subErr = subscriber.subscribe(topic);
+    if (subErr != TransportError::None)
     {
-        std::cerr << "[Subscriber " << topic << "] Failed to subscribe" << std::endl;
+        std::cerr << "[Subscriber " << topic << "] Failed to subscribe: " << toString(subErr) << std::endl;
         return;
     }
 
@@ -138,7 +141,8 @@ void subscriberThread(const std::string &topic)
     while (running && eventCount < 10)
     {
         Frame eventFrame;
-        if (!subscriber.receive(eventFrame))
+        auto recvErr = subscriber.receive(eventFrame);
+        if (recvErr != TransportError::None)
         {
             // Timeout - continue
             continue;

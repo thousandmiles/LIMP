@@ -107,9 +107,10 @@ int main()
 
     std::cout << "Connecting to broker at " << brokerEndpoint << "..." << std::endl;
 
-    if (!dealer.connect(brokerEndpoint))
+    auto connectErr = dealer.connect(brokerEndpoint);
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "Failed to connect to broker" << std::endl;
+        std::cerr << "Failed to connect: " << toString(connectErr) << std::endl;
         return 1;
     }
 
@@ -147,7 +148,8 @@ int main()
 
             // Try to receive response
             Frame response;
-            if (dealer.receive(response, 3000))
+            auto recvErr = dealer.receive(response, 3000);
+            if (recvErr == TransportError::None)
             {
                 receivedCount++;
                 MessageParser parser(response);
@@ -175,7 +177,8 @@ int main()
             std::cout << "[PLC] Waiting for requests..." << std::endl;
 
             Frame request;
-            if (dealer.receive(request, 5000))
+            auto recvErr = dealer.receive(request, 5000);
+            if (recvErr == TransportError::None)
             {
                 receivedCount++;
                 MessageParser parser(request);
@@ -205,7 +208,8 @@ int main()
             std::cout << "[LOGGER] Monitoring for events..." << std::endl;
 
             Frame frame;
-            if (dealer.receive(frame, 5000))
+            auto recvErr = dealer.receive(frame, 5000);
+            if (recvErr == TransportError::None)
             {
                 receivedCount++;
                 MessageParser parser(frame);
