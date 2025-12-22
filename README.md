@@ -117,6 +117,11 @@ target_include_directories(myapp PRIVATE path/to/LIMP/include)
 target_link_libraries(myapp PRIVATE path/to/LIMP/lib/limp.lib ws2_32)
 ```
 
+## Documentation
+
+- **[Transport API Reference](docs/transport_api.md)** - Complete API documentation for all transport classes (Client/Server, Pub/Sub, Router/Dealer)
+- **[Router/Dealer API](docs/router_dealer_api.md)** - Detailed guide for advanced routing patterns
+
 ## Examples
 
 Comprehensive examples demonstrating all features:
