@@ -133,15 +133,14 @@ Offset  Size  Field
 0       1     Version
 1       1     MsgType
 2       2     SrcNodeID (uint16, big-endian)
-4       2     DstNodeID (uint16, big-endian)
-6       2     ClassID (uint16, big-endian)
-8       2     InstanceID (uint16, big-endian)
-10      2     AttrID (uint16, big-endian)
-12      1     PayloadTypeID
-13      2     PayloadLen (uint16, big-endian; payload bytes only)
-15      1     Flags (bit0: CRC present, bits 1-7: reserved, MUST be 0)
-16      N     Payload (N = PayloadLen)
-16+N   2/0    CRC16-IBM (if Flags bit0 = 1; big-endian)
+4       2     ClassID (uint16, big-endian)
+6       2     InstanceID (uint16, big-endian)
+8       2     AttrID (uint16, big-endian)
+10      1     PayloadTypeID
+11      2     PayloadLen (uint16, big-endian; payload bytes only)
+13      1     Flags (bit0: CRC present, bits 1-7: reserved, MUST be 0)
+14      N     Payload (N = PayloadLen)
+14+N   2/0    CRC16-IBM (if Flags bit0 = 1; big-endian)
 
 Frame Size: Minimum 16 bytes (no payload, no CRC), Maximum 65552 bytes
             (16 header + 65534 payload + 2 CRC)
@@ -161,7 +160,6 @@ Flags Handling: Receivers MUST ignore frames with non-zero reserved bits (1-7)
 Version:      0x01
 MsgType:      0x01 (REQUEST)
 SrcNodeID:    0x00 0x10 (HMI, big-endian)
-DstNodeID:    0x00 0x30 (PLC, big-endian)
 ClassID:      0x30 0x00 (Tag, big-endian)
 InstanceID:   0x00 0x07
 AttrID:       0x00 0x01 (Value)
@@ -174,7 +172,6 @@ Payload:      (none)
 Version:      0x01
 MsgType:      0x02 (RESPONSE)
 SrcNodeID:    0x00 0x30 (PLC, big-endian)
-DstNodeID:    0x00 0x10 (HMI, big-endian)
 ClassID:      0x30 0x00
 InstanceID:   0x00 0x07
 AttrID:       0x00 0x01
@@ -189,7 +186,6 @@ CRC16:        0x8A 0x3C (example, BE)
 Version:      0x01
 MsgType:      0x04 (ERROR)
 SrcNodeID:    0x00 0x30 (PLC - responding to HMI request)
-DstNodeID:    0x00 0x10 (HMI - original requester)
 ClassID:      0x30 0x00 (echoed from request)
 InstanceID:   0x00 0x07 (echoed from request)
 AttrID:       0x00 0x01 (echoed from request)
