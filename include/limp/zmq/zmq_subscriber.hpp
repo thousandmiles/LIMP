@@ -65,12 +65,6 @@ namespace limp
         TransportError unsubscribe(const std::string &topic);
 
         /**
-         * @brief Not supported for subscriber (send-only operation)
-         * @return TransportError::InternalError
-         */
-        TransportError send(const Frame &frame) override;
-
-        /**
          * @brief Receive a LIMP frame (strips topic prefix automatically)
          *
          * @param frame Output frame
@@ -81,11 +75,20 @@ namespace limp
         TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Receive raw data
+         * @brief Receive raw data (last part of multipart message)
+         *
+         * If message has multiple parts (topic + data), returns only the data part.
+         *
          * @param buffer Pointer to buffer to store received data
          * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
          */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
+
+    private:
+        // Base class overrides - not supported for subscriber
+        TransportError send(const Frame &frame) override;
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
     };
 
 } // namespace limp

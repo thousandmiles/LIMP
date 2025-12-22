@@ -161,11 +161,23 @@ namespace limp
         TransportError send(const Frame &frame) override;
 
         /**
+         * @brief Not supported for router (use identity-based send)
+         * @return TransportError::InternalError
+         */
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
+
+        /**
          * @brief Not supported for router (use identity-based receive)
          * @param timeoutMs Ignored
          * @return TransportError::InternalError
          */
         TransportError receive(Frame &frame, int timeoutMs = -1) override;
+
+        /**
+         * @brief Not supported for router (use identity-based receive)
+         * @return -1 (error)
+         */
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
 
         /**
          * @brief Receive raw data without destination routing

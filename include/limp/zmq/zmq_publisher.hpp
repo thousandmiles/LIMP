@@ -46,49 +46,31 @@ namespace limp
         /**
          * @brief Publish a LIMP frame with topic
          *
-         * Sends a Frame with a topic prefix. Subscribers can filter
-         * messages by subscribing to specific topics.
+         * Publishes a Frame with a topic prefix. Subscribers can filter
+         * messages by subscribing to specific topics. Use empty string "" for no topic filtering.
          *
-         * @param topic Topic string for filtering
-         * @param frame Frame to send
+         * @param topic Topic string for filtering (use "" for broadcast to all)
+         * @param frame Frame to publish
          * @return TransportError::None on success, specific error code on failure
          */
         TransportError publish(const std::string &topic, const Frame &frame);
 
         /**
-         * @brief Send a LIMP frame
-         *
-         * Serializes and sends a LIMP frame to all subscribers.
-         *
-         * @param frame Frame to send
-         * @return TransportError::None on success, specific error code on failure
-         */
-        TransportError send(const Frame &frame) override;
-
-        /**
-         * @brief Not supported for publisher
-         * @return TransportError::InternalError
-         */
-        TransportError receive(Frame &frame, int timeoutMs = -1) override;
-
-        /**
-         * @brief Send raw data
-         *
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return TransportError::None on success, specific error code on failure
-         */
-        TransportError send(const uint8_t *data, size_t size);
-
-        /**
          * @brief Publish raw data with topic
          *
-         * @param topic Topic string for filtering
+         * @param topic Topic string for filtering (use "" for broadcast to all)
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
          * @return TransportError::None on success, specific error code on failure
          */
-        TransportError publish(const std::string &topic, const uint8_t *data, size_t size);
+        TransportError publishRaw(const std::string &topic, const uint8_t *data, size_t size);
+
+    private:
+        // Base class overrides - use publish() instead
+        TransportError send(const Frame &frame) override;
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
     };
 
 } // namespace limp

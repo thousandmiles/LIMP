@@ -76,7 +76,7 @@ namespace limp
          * @param size Size of data in bytes
          * @return TransportError::None on success, specific error code on failure
          */
-        TransportError send(const uint8_t *data, size_t size);
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
 
         /**
          * @brief Receive raw data
@@ -85,7 +85,7 @@ namespace limp
          * @param maxSize Maximum size of the buffer
          * @return Number of bytes received, or -1 on error
          */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
     };
 
 } // namespace limp

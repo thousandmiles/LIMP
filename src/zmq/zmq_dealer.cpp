@@ -138,6 +138,67 @@ namespace limp
         }
     }
 
+    std::ptrdiff_t ZMQDealer::receiveRaw(std::string &sourceIdentity,
+                                          uint8_t *buffer,
+                                          size_t maxSize)
+    {
+        if (!isConnected())
+        {
+            return -1;
+        }
+
+        try
+        {
+            std::vector<zmq::message_t> parts;
+            while (true)
+            {
+                zmq::message_t msg;
+                auto result = socket_->recv(msg, zmq::recv_flags::none);
+
+                if (!result)
+                {
+                    return 0; // Timeout
+                }
+
+                parts.push_back(std::move(msg));
+
+                auto more = socket_->get(zmq::sockopt::rcvmore);
+                if (!more)
+                {
+                    break;
+                }
+            }
+
+            if (parts.size() != 3)
+            {
+                handleError(zmq::error_t(), "dealer receiveRaw with identity: expected 3 parts, got " + std::to_string(parts.size()));
+                return -1;
+            }
+
+            // Extract source identity from first part
+            const auto &identityMsg = parts[0];
+            sourceIdentity = std::string(static_cast<const char*>(identityMsg.data()), identityMsg.size());
+
+            // Data is in the third part (after delimiter)
+            const auto &dataMsg = parts[2];
+            size_t receivedSize = dataMsg.size();
+
+            if (receivedSize > maxSize)
+            {
+                handleError(zmq::error_t(), "received message larger than buffer");
+                return -1;
+            }
+
+            std::memcpy(buffer, dataMsg.data(), receivedSize);
+            return static_cast<std::ptrdiff_t>(receivedSize);
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "dealer receiveRaw with identity");
+            return -1;
+        }
+    }
+
     TransportError ZMQDealer::send(const Frame &frame)
     {
         std::vector<uint8_t> buffer;
@@ -146,29 +207,7 @@ namespace limp
             return TransportError::SerializationFailed;
         }
         
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            zmq::message_t delimiterMsg;
-            auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
-            if (!delimiterResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-            auto result = socket_->send(dataMsg, zmq::send_flags::none);
-            return result.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "dealer send");
-            return TransportError::SendFailed;
-        }
+        return sendRaw(buffer.data(), buffer.size());
     }
 
     TransportError ZMQDealer::sendRaw(const std::string &destinationIdentity,
@@ -212,146 +251,59 @@ namespace limp
             return TransportError::SerializationFailed;
         }
         
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            zmq::message_t destMsg(destinationIdentity.data(), destinationIdentity.size());
-            zmq::message_t emptyMsg;
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-
-            if (!socket_->send(destMsg, zmq::send_flags::sndmore))
-            {
-                return TransportError::SendFailed;
-            }
-            if (!socket_->send(emptyMsg, zmq::send_flags::sndmore))
-            {
-                return TransportError::SendFailed;
-            }
-            auto result = socket_->send(dataMsg, zmq::send_flags::none);
-            return result.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "dealer send with destination");
-            return TransportError::SendFailed;
-        }
+        return sendRaw(destinationIdentity, buffer.data(), buffer.size());
     }
 
     TransportError ZMQDealer::receive(Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
 
-        if (!isConnected())
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(buffer.data(), buffer.size());
+        
+        if (received < 0)
         {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            std::vector<zmq::message_t> parts;
-
-            while (true)
-            {
-                zmq::message_t msg;
-                auto result = socket_->recv(msg, zmq::recv_flags::none);
-
-                if (!result)
-                {
-                    return TransportError::Timeout;
-                }
-
-                parts.push_back(std::move(msg));
-
-                auto more = socket_->get(zmq::sockopt::rcvmore);
-                if (!more)
-                {
-                    break;
-                }
-            }
-
-            if (parts.size() != 2)
-            {
-                return TransportError::InvalidFrame;
-            }
-
-            const auto &dataMsg = parts[1];
-            std::vector<uint8_t> buffer(static_cast<const uint8_t*>(dataMsg.data()),
-                                       static_cast<const uint8_t*>(dataMsg.data()) + dataMsg.size());
-
-            if (!deserializeFrame(buffer, frame))
-            {
-                return TransportError::DeserializationFailed;
-            }
-
-            return TransportError::None;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "dealer receive");
             return TransportError::ReceiveFailed;
         }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
+        buffer.resize(static_cast<size_t>(received));
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
     }
 
     TransportError ZMQDealer::receive(std::string &sourceIdentity, Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
 
-        if (!isConnected())
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(sourceIdentity, buffer.data(), buffer.size());
+        
+        if (received < 0)
         {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            std::vector<zmq::message_t> parts;
-
-            while (true)
-            {
-                zmq::message_t msg;
-                auto result = socket_->recv(msg, zmq::recv_flags::none);
-
-                if (!result)
-                {
-                    return TransportError::Timeout;
-                }
-
-                parts.push_back(std::move(msg));
-
-                auto more = socket_->get(zmq::sockopt::rcvmore);
-                if (!more)
-                {
-                    break;
-                }
-            }
-
-            if (parts.size() != 3)
-            {
-                return TransportError::InvalidFrame;
-            }
-
-            const auto &identityMsg = parts[0];
-            sourceIdentity = std::string(static_cast<const char*>(identityMsg.data()), identityMsg.size());
-
-            const auto &dataMsg = parts[2];
-            std::vector<uint8_t> buffer(static_cast<const uint8_t*>(dataMsg.data()),
-                                       static_cast<const uint8_t*>(dataMsg.data()) + dataMsg.size());
-
-            if (!deserializeFrame(buffer, frame))
-            {
-                return TransportError::DeserializationFailed;
-            }
-
-            return TransportError::None;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "dealer receive with source");
             return TransportError::ReceiveFailed;
         }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
+        buffer.resize(static_cast<size_t>(received));
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
     }
 
 } // namespace limp

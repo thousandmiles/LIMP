@@ -99,62 +99,29 @@ namespace limp
     {
         (void)timeoutMs; // Timeout is set via socket options
 
-        if (!isConnected())
+        std::vector<uint8_t> identityVec;
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(identityVec, buffer.data(), buffer.size());
+        
+        if (received < 0)
         {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            // Receive all message parts
-            std::vector<zmq::message_t> parts;
-
-            while (true)
-            {
-                zmq::message_t msg;
-                auto result = socket_->recv(msg, zmq::recv_flags::none);
-
-                if (!result)
-                {
-                    return TransportError::Timeout;
-                }
-
-                parts.push_back(std::move(msg));
-
-                auto more = socket_->get(zmq::sockopt::rcvmore);
-                if (!more)
-                {
-                    break;
-                }
-            }
-
-            // Expect format: [identity][delimiter][data]
-            if (parts.size() < 3)
-            {
-                return TransportError::InvalidFrame;
-            }
-
-            // Extract source identity
-            const auto &identityMsg = parts[0];
-            sourceIdentity = std::string(static_cast<const char*>(identityMsg.data()), identityMsg.size());
-
-            // Data is the last part
-            const auto &dataMsg = parts[parts.size() - 1];
-            std::vector<uint8_t> buffer(static_cast<const uint8_t*>(dataMsg.data()),
-                                       static_cast<const uint8_t*>(dataMsg.data()) + dataMsg.size());
-            
-            if (!deserializeFrame(buffer, frame))
-            {
-                return TransportError::DeserializationFailed;
-            }
-            
-            return TransportError::None;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "router receive");
             return TransportError::ReceiveFailed;
         }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
+        // Convert identity vector to string
+        sourceIdentity.assign(identityVec.begin(), identityVec.end());
+        buffer.resize(static_cast<size_t>(received));
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
     }
 
     std::ptrdiff_t ZMQRouter::receiveRaw(std::vector<uint8_t> &sourceIdentity,
@@ -232,66 +199,31 @@ namespace limp
     {
         (void)timeoutMs; // Timeout is set via socket options
 
-        if (!isConnected())
+        std::vector<uint8_t> sourceIdentityVec;
+        std::vector<uint8_t> destinationIdentityVec;
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(sourceIdentityVec, destinationIdentityVec, buffer.data(), buffer.size());
+        
+        if (received < 0)
         {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            // Receive all message parts
-            std::vector<zmq::message_t> parts;
-
-            while (true)
-            {
-                zmq::message_t msg;
-                auto result = socket_->recv(msg, zmq::recv_flags::none);
-
-                if (!result)
-                {
-                    return TransportError::Timeout;
-                }
-
-                parts.push_back(std::move(msg));
-
-                auto more = socket_->get(zmq::sockopt::rcvmore);
-                if (!more)
-                {
-                    break;
-                }
-            }
-
-            // Expect format: [source_identity][dest_identity][delimiter][data]
-            if (parts.size() < 4)
-            {
-                return TransportError::InvalidFrame;
-            }
-
-            // Extract source identity
-            const auto &sourceMsg = parts[0];
-            sourceIdentity = std::string(static_cast<const char*>(sourceMsg.data()), sourceMsg.size());
-
-            // Extract destination identity
-            const auto &destMsg = parts[1];
-            destinationIdentity = std::string(static_cast<const char*>(destMsg.data()), destMsg.size());
-
-            // Data is the last part
-            const auto &dataMsg = parts[parts.size() - 1];
-            std::vector<uint8_t> buffer(static_cast<const uint8_t*>(dataMsg.data()),
-                                       static_cast<const uint8_t*>(dataMsg.data()) + dataMsg.size());
-            
-            if (!deserializeFrame(buffer, frame))
-            {
-                return TransportError::DeserializationFailed;
-            }
-            
-            return TransportError::None;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "router receive");
             return TransportError::ReceiveFailed;
         }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
+        // Convert identity vectors to strings
+        sourceIdentity.assign(sourceIdentityVec.begin(), sourceIdentityVec.end());
+        destinationIdentity.assign(destinationIdentityVec.begin(), destinationIdentityVec.end());
+        buffer.resize(static_cast<size_t>(received));
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
     }
 
     TransportError ZMQRouter::sendRaw(const std::vector<uint8_t> &identity,
@@ -383,37 +315,7 @@ namespace limp
         }
 
         std::vector<uint8_t> identityVec(clientIdentity.begin(), clientIdentity.end());
-        
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            zmq::message_t identityMsg(identityVec.data(), identityVec.size());
-            auto identityResult = socket_->send(identityMsg, zmq::send_flags::sndmore);
-            if (!identityResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t delimiterMsg;
-            auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
-            if (!delimiterResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-            auto dataResult = socket_->send(dataMsg, zmq::send_flags::none);
-            return dataResult.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "router send");
-            return TransportError::SendFailed;
-        }
+        return sendRaw(identityVec, buffer.data(), buffer.size());
     }
 
     TransportError ZMQRouter::send(const std::string &clientIdentity,
@@ -428,49 +330,20 @@ namespace limp
 
         std::vector<uint8_t> clientIdentityVec(clientIdentity.begin(), clientIdentity.end());
         std::vector<uint8_t> sourceIdentityVec(sourceIdentity.begin(), sourceIdentity.end());
-
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            zmq::message_t clientIdentityMsg(clientIdentityVec.data(), clientIdentityVec.size());
-            auto clientIdentityResult = socket_->send(clientIdentityMsg, zmq::send_flags::sndmore);
-            if (!clientIdentityResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t sourceIdentityMsg(sourceIdentityVec.data(), sourceIdentityVec.size());
-            auto sourceIdentityResult = socket_->send(sourceIdentityMsg, zmq::send_flags::sndmore);
-            if (!sourceIdentityResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t delimiterMsg;
-            auto delimiterResult = socket_->send(delimiterMsg, zmq::send_flags::sndmore);
-            if (!delimiterResult)
-            {
-                return TransportError::SendFailed;
-            }
-
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-            auto dataResult = socket_->send(dataMsg, zmq::send_flags::none);
-            return dataResult.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "router send");
-            return TransportError::SendFailed;
-        }
+        return sendRaw(clientIdentityVec, sourceIdentityVec, buffer.data(), buffer.size());
     }
 
     TransportError ZMQRouter::send(const Frame &frame)
     {
         (void)frame;
+        handleError(zmq::error_t(), "router requires client identity for send");
+        return TransportError::InternalError;
+    }
+
+    TransportError ZMQRouter::sendRaw(const uint8_t *data, size_t size)
+    {
+        (void)data;
+        (void)size;
         handleError(zmq::error_t(), "router requires client identity for send");
         return TransportError::InternalError;
     }
@@ -481,6 +354,14 @@ namespace limp
         (void)timeoutMs;
         handleError(zmq::error_t(), "router requires identity output for receive");
         return TransportError::InternalError;
+    }
+
+    std::ptrdiff_t ZMQRouter::receiveRaw(uint8_t *buffer, size_t maxSize)
+    {
+        (void)buffer;
+        (void)maxSize;
+        handleError(zmq::error_t(), "router requires identity output for receive");
+        return -1;
     }
 
 } // namespace limp

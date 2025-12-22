@@ -30,12 +30,7 @@ namespace limp
         }
     }
 
-    TransportError ZMQPublisher::send(const uint8_t *data, size_t size)
-    {
-        return publish("", data, size);
-    }
-
-    TransportError ZMQPublisher::publish(const std::string &topic, const uint8_t *data, size_t size)
+    TransportError ZMQPublisher::publishRaw(const std::string &topic, const uint8_t *data, size_t size)
     {
         if (!isConnected())
         {
@@ -67,32 +62,6 @@ namespace limp
         }
     }
 
-    TransportError ZMQPublisher::send(const Frame &frame)
-    {
-        std::vector<uint8_t> buffer;
-        if (!serializeFrame(frame, buffer))
-        {
-            return TransportError::SerializationFailed;
-        }
-        
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
-
-        try
-        {
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-            auto result = socket_->send(dataMsg, zmq::send_flags::none);
-            return result.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "publisher send");
-            return TransportError::SendFailed;
-        }
-    }
-
     TransportError ZMQPublisher::publish(const std::string &topic, const Frame &frame)
     {
         std::vector<uint8_t> buffer;
@@ -101,40 +70,37 @@ namespace limp
             return TransportError::SerializationFailed;
         }
         
-        if (!isConnected())
-        {
-            return TransportError::NotConnected;
-        }
+        return publishRaw(topic, buffer.data(), buffer.size());
+    }
 
-        try
-        {
-            // Send topic as first part (if not empty)
-            if (!topic.empty())
-            {
-                zmq::message_t topicMsg(topic.data(), topic.size());
-                auto result = socket_->send(topicMsg, zmq::send_flags::sndmore);
-                if (!result)
-                {
-                    return TransportError::SendFailed;
-                }
-            }
+    TransportError ZMQPublisher::send(const Frame &frame)
+    {
+        (void)frame;
+        handleError(zmq::error_t(), "publisher: use publish() instead of send()");
+        return TransportError::InternalError;
+    }
 
-            // Send data as second part
-            zmq::message_t dataMsg(buffer.data(), buffer.size());
-            auto result = socket_->send(dataMsg, zmq::send_flags::none);
-            return result.has_value() ? TransportError::None : TransportError::SendFailed;
-        }
-        catch (const zmq::error_t &e)
-        {
-            handleError(e, "publisher publish");
-            return TransportError::SendFailed;
-        }
+    TransportError ZMQPublisher::sendRaw(const uint8_t *data, size_t size)
+    {
+        (void)data;
+        (void)size;
+        handleError(zmq::error_t(), "publisher: use publishRaw() instead of sendRaw()");
+        return TransportError::InternalError;
+    }
+
+    std::ptrdiff_t ZMQPublisher::receiveRaw(uint8_t *buffer, size_t maxSize)
+    {
+        (void)buffer;
+        (void)maxSize;
+        handleError(zmq::error_t(), "publisher: publishers cannot receive, only publish");
+        return -1; // Publishers don't receive
     }
 
     TransportError ZMQPublisher::receive(Frame &frame, int timeoutMs)
     {
         (void)frame;
         (void)timeoutMs;
+        handleError(zmq::error_t(), "publisher: publishers cannot receive, only publish");
         return TransportError::InternalError; // Publishers don't receive
     }
 
