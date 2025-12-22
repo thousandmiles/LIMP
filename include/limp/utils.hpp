@@ -6,10 +6,11 @@
 namespace limp
 {
     /**
-     * @brief Utility functions for binary data conversion
+     * @brief Binary serialization utilities
      *
-     * Provides endianness conversion and floating-point bit manipulation
-     * functions for network protocol serialization.
+     * Endianness conversion (host ↔ network byte order) and
+     * type-punning functions for protocol serialization.
+     * All multi-byte values use big-endian (network) byte order.
      */
     namespace utils
     {
@@ -88,13 +89,13 @@ namespace limp
         inline uint64_t ntoh64(uint64_t value) { return hton64(value); }
 
         /**
-         * @brief Convert float to 32-bit integer representation
+         * @brief Convert float to bit representation
          *
-         * Type-punning via memcpy for safe bit-level access without
-         * violating strict aliasing rules.
+         * Safe type-punning using memcpy (avoids strict aliasing violations).
+         * Used for serializing IEEE 754 floats.
          *
          * @param value Floating-point value
-         * @return 32-bit integer with same bit pattern
+         * @return 32-bit integer with identical bit pattern
          */
         inline uint32_t floatToBits(float value)
         {
@@ -116,9 +117,13 @@ namespace limp
         }
 
         /**
-         * @brief Convert double to 64-bit integer representation
+         * @brief Convert double to bit representation
+         *
+         * Safe type-punning using memcpy (avoids strict aliasing violations).
+         * Used for serializing IEEE 754 doubles.
+         *
          * @param value Double-precision floating-point value
-         * @return 64-bit integer with same bit pattern
+         * @return 64-bit integer with identical bit pattern
          */
         inline uint64_t doubleToBits(double value)
         {
