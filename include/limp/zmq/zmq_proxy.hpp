@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zmq_config.hpp"
+#include "../transport.hpp"
 #include <zmq.hpp>
 #include <memory>
 #include <string>
@@ -115,9 +116,13 @@ namespace limp
          */
         ~ZMQProxy();
 
-        // Disable copy construction and assignment
+        // Disable copy construction and assignment (proxy manages unique thread/socket resources)
         ZMQProxy(const ZMQProxy &) = delete;
         ZMQProxy &operator=(const ZMQProxy &) = delete;
+
+        // Enable move operations (transfer ownership of thread/sockets)
+        ZMQProxy(ZMQProxy &&) noexcept = default;
+        ZMQProxy &operator=(ZMQProxy &&) noexcept = default;
 
         /**
          * @brief Set frontend endpoint
@@ -126,9 +131,9 @@ namespace limp
          *
          * @param endpoint Endpoint address (e.g., "tcp://0.0.0.0:5555")
          * @param bind If true, binds to endpoint; if false, connects to endpoint
-         * @return true on success, false if already running
+         * @return TransportError::None on success, specific error code if already running
          */
-        bool setFrontend(const std::string &endpoint, bool bind = true);
+        TransportError setFrontend(const std::string &endpoint, bool bind = true);
 
         /**
          * @brief Set backend endpoint
@@ -137,9 +142,9 @@ namespace limp
          *
          * @param endpoint Endpoint address (e.g., "tcp://0.0.0.0:5556")
          * @param bind If true, binds to endpoint; if false, connects to endpoint
-         * @return true on success, false if already running
+         * @return TransportError::None on success, specific error code if already running
          */
-        bool setBackend(const std::string &endpoint, bool bind = true);
+        TransportError setBackend(const std::string &endpoint, bool bind = true);
 
         /**
          * @brief Set capture endpoint for monitoring
@@ -149,9 +154,9 @@ namespace limp
          * that publishes all messages.
          *
          * @param endpoint Capture endpoint (e.g., "tcp://0.0.0.0:9999")
-         * @return true on success, false if already running
+         * @return TransportError::None on success, specific error code if already running
          */
-        bool setCapture(const std::string &endpoint);
+        TransportError setCapture(const std::string &endpoint);
 
         /**
          * @brief Set error callback function
@@ -168,9 +173,9 @@ namespace limp
          * Starts the proxy in a background thread. The proxy will run
          * until stop() is called or an error occurs.
          *
-         * @return true if started successfully, false if already running or config invalid
+         * @return TransportError::None if started successfully, specific error code if already running or config invalid
          */
-        bool start();
+        TransportError start();
 
         /**
          * @brief Stop the proxy

@@ -79,9 +79,9 @@ namespace limp
          * incoming connections from DEALER clients.
          *
          * @param endpoint Bind address (e.g., "tcp://0.0.0.0:5555")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool bind(const std::string &endpoint);
+        TransportError bind(const std::string &endpoint);
 
         /**
          * @brief Receive a LIMP frame with source identity only
@@ -95,9 +95,10 @@ namespace limp
          * @param sourceIdentity Output: sender's identity
          * @param frame Output: received frame
          * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(std::string &sourceIdentity,
+        TransportError receive(std::string &sourceIdentity,
                      Frame &frame,
                      int timeoutMs = -1);
 
@@ -114,9 +115,10 @@ namespace limp
          * @param destinationIdentity Output: intended recipient's identity
          * @param frame Output: received frame
          * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(std::string &sourceIdentity,
+        TransportError receive(std::string &sourceIdentity,
                      std::string &destinationIdentity,
                      Frame &frame,
                      int timeoutMs = -1);
@@ -132,9 +134,9 @@ namespace limp
          *
          * @param clientIdentity Target client identity
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const std::string &clientIdentity, const Frame &frame);
+        TransportError send(const std::string &clientIdentity, const Frame &frame);
 
         /**
          * @brief Send a LIMP frame to a specific client with source identity
@@ -148,22 +150,22 @@ namespace limp
          * @param clientIdentity Target client identity
          * @param sourceIdentity Source identity representing the sender
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const std::string &clientIdentity, const std::string &sourceIdentity, const Frame &frame);
+        TransportError send(const std::string &clientIdentity, const std::string &sourceIdentity, const Frame &frame);
 
         /**
          * @brief Not supported for router (use identity-based send)
-         * @return false
+         * @return TransportError::InternalError
          */
-        bool send(const Frame &frame) override;
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Not supported for router (use identity-based receive)
          * @param timeoutMs Ignored
-         * @return false
+         * @return TransportError::InternalError
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
          * @brief Receive raw data without destination routing
@@ -212,9 +214,9 @@ namespace limp
          * @param clientIdentity Target client identity
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool sendRaw(const std::vector<uint8_t> &clientIdentity,
+        TransportError sendRaw(const std::vector<uint8_t> &clientIdentity,
                      const uint8_t *data,
                      size_t size);
 
@@ -230,9 +232,9 @@ namespace limp
          * @param sourceIdentity Source identity representing the sender
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool sendRaw(const std::vector<uint8_t> &clientIdentity,
+        TransportError sendRaw(const std::vector<uint8_t> &clientIdentity,
                      const std::vector<uint8_t> &sourceIdentity,
                      const uint8_t *data,
                      size_t size);

@@ -39,9 +39,9 @@ namespace limp
          * Binds the publisher socket to the specified endpoint.
          *
          * @param endpoint Bind address (e.g., "tcp://0.0.0.0:5556")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool bind(const std::string &endpoint);
+        TransportError bind(const std::string &endpoint);
 
         /**
          * @brief Publish a LIMP frame with topic
@@ -51,9 +51,9 @@ namespace limp
          *
          * @param topic Topic string for filtering
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool publish(const std::string &topic, const Frame &frame);
+        TransportError publish(const std::string &topic, const Frame &frame);
 
         /**
          * @brief Send a LIMP frame
@@ -61,26 +61,34 @@ namespace limp
          * Serializes and sends a LIMP frame to all subscribers.
          *
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const Frame &frame) override;
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Not supported for publisher
-         * @return false
+         * @return TransportError::InternalError
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
-
-    private:
-        /**
-         * @brief Internal helper to send raw data
-         */
-        bool send(const uint8_t *data, size_t size);
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Internal helper to publish raw data with topic
+         * @brief Send raw data
+         *
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool publish(const std::string &topic, const uint8_t *data, size_t size);
+        TransportError send(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Publish raw data with topic
+         *
+         * @param topic Topic string for filtering
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return TransportError::None on success, specific error code on failure
+         */
+        TransportError publish(const std::string &topic, const uint8_t *data, size_t size);
     };
 
 } // namespace limp

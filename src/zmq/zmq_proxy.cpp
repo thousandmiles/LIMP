@@ -16,7 +16,7 @@ namespace limp
         stop();
     }
 
-    bool ZMQProxy::setFrontend(const std::string &endpoint, bool bind)
+    TransportError ZMQProxy::setFrontend(const std::string &endpoint, bool bind)
     {
         if (running_.load())
         {
@@ -24,15 +24,15 @@ namespace limp
             {
                 errorCallback_("Cannot set frontend while proxy is running");
             }
-            return false;
+            return TransportError::ConfigurationError;
         }
 
         frontendEndpoint_ = endpoint;
         frontendBind_ = bind;
-        return true;
+        return TransportError::None;
     }
 
-    bool ZMQProxy::setBackend(const std::string &endpoint, bool bind)
+    TransportError ZMQProxy::setBackend(const std::string &endpoint, bool bind)
     {
         if (running_.load())
         {
@@ -40,15 +40,15 @@ namespace limp
             {
                 errorCallback_("Cannot set backend while proxy is running");
             }
-            return false;
+            return TransportError::ConfigurationError;
         }
 
         backendEndpoint_ = endpoint;
         backendBind_ = bind;
-        return true;
+        return TransportError::None;
     }
 
-    bool ZMQProxy::setCapture(const std::string &endpoint)
+    TransportError ZMQProxy::setCapture(const std::string &endpoint)
     {
         if (running_.load())
         {
@@ -56,11 +56,11 @@ namespace limp
             {
                 errorCallback_("Cannot set capture while proxy is running");
             }
-            return false;
+            return TransportError::ConfigurationError;
         }
 
         captureEndpoint_ = endpoint;
-        return true;
+        return TransportError::None;
     }
 
     void ZMQProxy::setErrorCallback(std::function<void(const std::string &)> callback)
@@ -68,7 +68,7 @@ namespace limp
         errorCallback_ = callback;
     }
 
-    bool ZMQProxy::start()
+    TransportError ZMQProxy::start()
     {
         if (running_.load())
         {
@@ -76,7 +76,7 @@ namespace limp
             {
                 errorCallback_("Proxy is already running");
             }
-            return false;
+            return TransportError::ConfigurationError;
         }
 
         if (frontendEndpoint_.empty() || backendEndpoint_.empty())
@@ -85,12 +85,12 @@ namespace limp
             {
                 errorCallback_("Frontend and backend endpoints must be set");
             }
-            return false;
+            return TransportError::InvalidEndpoint;
         }
 
         stopRequested_ = false;
         thread_ = std::make_unique<std::thread>(&ZMQProxy::proxyThread, this);
-        return true;
+        return TransportError::None;
     }
 
     void ZMQProxy::stop()

@@ -43,9 +43,9 @@ namespace limp
          * incoming connections.
          *
          * @param endpoint Bind address (e.g., "tcp://0.0.0.0:5555")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool bind(const std::string &endpoint);
+        TransportError bind(const std::string &endpoint);
 
         /**
          * @brief Send a LIMP frame
@@ -53,9 +53,9 @@ namespace limp
          * Serializes and sends a LIMP frame via REP socket.
          *
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const Frame &frame) override;
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Receive a LIMP frame
@@ -64,18 +64,26 @@ namespace limp
          *
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
-
-    private:
-        /**
-         * @brief Internal helper to send raw data
-         */
-        bool send(const uint8_t *data, size_t size);
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Internal helper to receive raw data
+         * @brief Send raw data
+         *
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return TransportError::None on success, specific error code on failure
+         */
+        TransportError send(const uint8_t *data, size_t size);
+
+        /**
+         * @brief Receive raw data
+         *
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
          */
         std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };

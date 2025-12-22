@@ -85,9 +85,9 @@ namespace limp
          * Note: Identity must be unique within the context of the ROUTER.
          *
          * @param identity Unique identity string
-         * @return true on success, false if already connected
+         * @return TransportError::None on success, TransportError::AlreadyConnected if already connected
          */
-        bool setIdentity(const std::string &identity);
+        TransportError setIdentity(const std::string &identity);
 
         /**
          * @brief Connect to a router endpoint
@@ -95,9 +95,9 @@ namespace limp
          * Establishes connection to the specified ROUTER endpoint.
          *
          * @param endpoint Router address (e.g., "tcp://127.0.0.1:5555")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool connect(const std::string &endpoint);
+        TransportError connect(const std::string &endpoint);
 
         /**
          * @brief Send a LIMP frame without routing
@@ -108,9 +108,9 @@ namespace limp
          * Pair with: router.receive(sourceIdentity, frame)
          *
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const Frame &frame) override;
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Send a LIMP frame with explicit destination routing
@@ -123,9 +123,9 @@ namespace limp
          *
          * @param destinationIdentity Target identity for routing
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const std::string &destinationIdentity, const Frame &frame);
+        TransportError send(const std::string &destinationIdentity, const Frame &frame);
 
         /**
          * @brief Receive a LIMP frame without source identity
@@ -138,9 +138,10 @@ namespace limp
          *
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
          * @brief Receive a LIMP frame with source identity
@@ -154,9 +155,10 @@ namespace limp
          * @param sourceIdentity Output: sender's identity from router
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds (currently unused, uses socket config timeout)
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
+        TransportError receive(std::string &sourceIdentity, Frame &frame, int timeoutMs = -1);
 
         /**
          * @brief Get the current identity
@@ -175,9 +177,9 @@ namespace limp
          *
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool sendRaw(const uint8_t *data, size_t size);
+        TransportError sendRaw(const uint8_t *data, size_t size);
 
         /**
          * @brief Send raw data with routing
@@ -190,9 +192,9 @@ namespace limp
          * @param destinationIdentity Target identity for routing
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool sendRaw(const std::string &destinationIdentity,
+        TransportError sendRaw(const std::string &destinationIdentity,
                      const uint8_t *data,
                      size_t size);
 

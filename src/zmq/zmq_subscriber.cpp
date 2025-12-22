@@ -11,11 +11,11 @@ namespace limp
         createSocket(zmq::socket_type::sub);
     }
 
-    bool ZMQSubscriber::connect(const std::string &endpoint)
+    TransportError ZMQSubscriber::connect(const std::string &endpoint)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
@@ -23,71 +23,115 @@ namespace limp
             socket_->connect(endpoint);
             endpoint_ = endpoint;
             connected_ = true;
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber connect");
-            return false;
+            return TransportError::ConnectionFailed;
         }
     }
 
-    bool ZMQSubscriber::subscribe(const std::string &topic)
+    TransportError ZMQSubscriber::subscribe(const std::string &topic)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
         {
             socket_->set(zmq::sockopt::subscribe, topic);
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber subscribe");
-            return false;
+            return TransportError::ConfigurationError;
         }
     }
 
-    bool ZMQSubscriber::unsubscribe(const std::string &topic)
+    TransportError ZMQSubscriber::unsubscribe(const std::string &topic)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
         {
             socket_->set(zmq::sockopt::unsubscribe, topic);
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber unsubscribe");
-            return false;
+            return TransportError::ConfigurationError;
         }
     }
 
-    bool ZMQSubscriber::send(const Frame &frame)
+    TransportError ZMQSubscriber::send(const Frame &frame)
     {
         // Subscribers don't send
         (void)frame;
-        return false;
+        return TransportError::InternalError;
     }
 
-    bool ZMQSubscriber::receive(Frame &frame, int timeoutMs)
+    TransportError ZMQSubscriber::receive(Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
-        std::vector<uint8_t> buffer(2048);
-        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
-        if (received <= 0)
+        
+        if (!isConnected())
         {
-            return false;
+            return TransportError::NotConnected;
         }
-        buffer.resize(static_cast<size_t>(received));
-        return deserializeFrame(buffer, frame);
+
+        try
+        {
+            // Receive all parts of the message
+            std::vector<zmq::message_t> messages;
+
+            while (true)
+            {
+                zmq::message_t message;
+                auto result = socket_->recv(message, zmq::recv_flags::none);
+
+                if (!result)
+                {
+                    return TransportError::Timeout;
+                }
+
+                messages.push_back(std::move(message));
+
+                // Check if more parts are coming
+                auto more = socket_->get(zmq::sockopt::rcvmore);
+
+                if (!more)
+                {
+                    break;
+                }
+            }
+
+            // If there are multiple parts, the first part is the topic (skip it)
+            // The actual frame data is in the last part
+            size_t dataPartIndex = (messages.size() > 1) ? messages.size() - 1 : 0;
+            
+            const auto &dataMsg = messages[dataPartIndex];
+            std::vector<uint8_t> buffer(static_cast<const uint8_t*>(dataMsg.data()),
+                                       static_cast<const uint8_t*>(dataMsg.data()) + dataMsg.size());
+            
+            if (!deserializeFrame(buffer, frame))
+            {
+                return TransportError::DeserializationFailed;
+            }
+            
+            return TransportError::None;
+        }
+        catch (const zmq::error_t &e)
+        {
+            handleError(e, "subscriber receive");
+            return TransportError::ReceiveFailed;
+        }
     }
 
     std::ptrdiff_t ZMQSubscriber::receive(uint8_t *buffer, size_t maxSize)

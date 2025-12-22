@@ -42,9 +42,13 @@ namespace limp
          */
         virtual ~ZMQTransport();
 
-        // Disable copy construction and assignment
+        // Disable copy construction and assignment (sockets are unique resources)
         ZMQTransport(const ZMQTransport &) = delete;
         ZMQTransport &operator=(const ZMQTransport &) = delete;
+
+        // Enable move operations (transfer ownership of socket/context)
+        ZMQTransport(ZMQTransport &&) noexcept = default;
+        ZMQTransport &operator=(ZMQTransport &&) noexcept = default;
 
         /**
          * @brief Check if transport is connected

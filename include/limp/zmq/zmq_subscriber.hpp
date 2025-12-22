@@ -38,9 +38,9 @@ namespace limp
          * Establishes connection to the specified publisher.
          *
          * @param endpoint Publisher address (e.g., "tcp://127.0.0.1:5556")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool connect(const std::string &endpoint);
+        TransportError connect(const std::string &endpoint);
 
         /**
          * @brief Subscribe to a topic
@@ -50,9 +50,9 @@ namespace limp
          * messages.
          *
          * @param topic Topic to subscribe to (empty for all messages)
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool subscribe(const std::string &topic = "");
+        TransportError subscribe(const std::string &topic = "");
 
         /**
          * @brief Unsubscribe from a topic
@@ -60,28 +60,30 @@ namespace limp
          * Removes a topic subscription filter.
          *
          * @param topic Topic to unsubscribe from
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool unsubscribe(const std::string &topic);
+        TransportError unsubscribe(const std::string &topic);
 
         /**
          * @brief Not supported for subscriber (send-only operation)
-         * @return false
+         * @return TransportError::InternalError
          */
-        bool send(const Frame &frame) override;
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Receive a LIMP frame (strips topic prefix automatically)
          *
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
-    private:
         /**
-         * @brief Internal helper to receive raw data
+         * @brief Receive raw data
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
          */
         std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
     };
