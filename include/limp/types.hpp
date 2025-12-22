@@ -38,26 +38,30 @@ namespace limp
     };
 
     /**
-     * @brief Error code identifiers
+     * @brief Application-level error reporting
      *
-     * Standard error codes for ERROR message types.
+     * MsgType::ERROR is for application-defined error codes, not transport errors.
+     * Applications define custom error enums and encode as payload (typically UINT8).
+     * Transport-level errors use TransportError instead.
+     *
+     * Example:
+     * @code
+     * enum class MyAppError : uint8_t {
+     *     SensorFailure = 0x01,
+     *     InvalidSetpoint = 0x02
+     * };
+     *
+     * auto errorMsg = MessageBuilder::error(srcNode, classID, instanceID, attrID)
+     *     .setPayload(static_cast<uint8_t>(MyAppError::SensorFailure))
+     *     .build();
+     * @endcode
      */
-    enum class ErrorCode : uint8_t
-    {
-        InvalidClass = 0x01,       ///< Class ID not recognized
-        InvalidInstance = 0x02,    ///< Instance ID not found
-        InvalidAttribute = 0x03,   ///< Attribute ID not supported
-        PermissionDenied = 0x04,   ///< Access denied
-        BadPayload = 0x05,         ///< Invalid payload data
-        InternalError = 0x06,      ///< Internal server error
-        UnsupportedVersion = 0x07, ///< Protocol version not supported
-        InvalidFlags = 0x08        ///< Invalid frame flags
-    };
 
     /**
      * @brief Payload data type identifiers
      *
-     * Defines the type and encoding of payload data.
+     * Specifies payload data type and encoding format.
+     * All multi-byte types use big-endian (network) byte order.
      */
     enum class PayloadType : uint8_t
     {
@@ -73,30 +77,6 @@ namespace limp
     };
 
     /**
-     * @brief Quality values for Tag.Quality attribute
-     *
-     * Indicates data quality status for tag values.
-     */
-    enum class Quality : uint8_t
-    {
-        Bad = 0,      ///< Data is not reliable
-        Good = 1,     ///< Data is valid and reliable
-        Uncertain = 2 ///< Data quality is uncertain
-    };
-
-    /**
-     * @brief Alarm severity levels
-     *
-     * Standard severity classification for alarm objects.
-     */
-    enum class Severity : uint8_t
-    {
-        Info = 0,    ///< Informational message
-        Warning = 1, ///< Warning condition
-        Critical = 2 ///< Critical alarm
-    };
-
-    /**
      * @brief Frame flag bit definitions
      */
     namespace Flags
@@ -109,12 +89,12 @@ namespace limp
     }
 
     /**
-     * @brief Get fixed size of payload type in bytes
+     * @brief Get fixed size of payload type
      *
-     * Returns 0 for variable-length types (STRING, OPAQUE, NONE).
+     * Returns fixed byte size for scalar types, 0 for variable-length types.
      *
      * @param type Payload type
-     * @return Size in bytes, or 0 for variable-length
+     * @return Size in bytes (0 for NONE, STRING, OPAQUE)
      */
     inline uint16_t getPayloadTypeSize(PayloadType type)
     {
@@ -149,20 +129,11 @@ namespace limp
      * @{
      */
 
-    /** @brief Convert MsgType to string */
-    const char *toString(MsgType type);
+    /** @brief Convert MsgType to string (never null) */
+    const char *toString(MsgType type) noexcept;
 
-    /** @brief Convert PayloadType to string */
-    const char *toString(PayloadType type);
-
-    /** @brief Convert ErrorCode to string */
-    const char *toString(ErrorCode code);
-
-    /** @brief Convert Quality to string */
-    const char *toString(Quality quality);
-
-    /** @brief Convert Severity to string */
-    const char *toString(Severity severity);
+    /** @brief Convert PayloadType to string (never null) */
+    const char *toString(PayloadType type) noexcept;
 
     /** @} */
 
