@@ -111,21 +111,36 @@ int main()
     std::cout << "\nExample 3: ERROR - Invalid Attribute\n";
     std::cout << "------------------------------------\n";
 
+    // Applications define their own error codes
+    enum class PLCError : uint8_t {
+        InvalidAttribute = 0x03
+    };
+
     auto error = MessageBuilder::error(
         0x0030,                     // Source: PLC
         0x3000,                     // Class: Tag (echoed)
         7,                          // Instance: Tag7 (echoed)
-        0x0001,                     // Attribute: Value (echoed)
-        ErrorCode::InvalidAttribute // Error code
-    );
+        0x0001                      // Attribute: Value (echoed)
+    ).setPayload(static_cast<uint8_t>(PLCError::InvalidAttribute));
 
     Frame frame3 = error.build();
     printFrame(frame3);
 
+    // Method 1: Using the dedicated getErrorCode() helper
     MessageParser errorParser(frame3);
     if (auto code = errorParser.getErrorCode())
     {
-        std::cout << "Error Code: " << toString(*code) << "\n\n";
+        std::cout << "Error Code (getErrorCode): 0x" << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<int>(*code) << std::dec 
+                  << " - Cast to PLCError::InvalidAttribute\n";
+    }
+
+    // Method 2: Using getUInt8() directly (same result)
+    if (auto code = errorParser.getUInt8())
+    {
+        std::cout << "Error Code (getUInt8):     0x" << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<int>(*code) << std::dec 
+                  << " (Application-defined)\n\n";
     }
 
     // Example 4: SUBSCRIBE request

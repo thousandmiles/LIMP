@@ -125,11 +125,28 @@ namespace limp
         return *this;
     }
 
+    MessageBuilder &MessageBuilder::setPayload(std::string &&value)
+    {
+        frame_.payloadType = PayloadType::STRING;
+        frame_.payloadLen = static_cast<uint16_t>(value.size());
+        frame_.payload.resize(value.size());
+        std::memcpy(frame_.payload.data(), value.data(), value.size());
+        return *this;
+    }
+
     MessageBuilder &MessageBuilder::setPayload(const std::vector<uint8_t> &value)
     {
         frame_.payloadType = PayloadType::OPAQUE;
         frame_.payloadLen = static_cast<uint16_t>(value.size());
         frame_.payload = value;
+        return *this;
+    }
+
+    MessageBuilder &MessageBuilder::setPayload(std::vector<uint8_t> &&value)
+    {
+        frame_.payloadType = PayloadType::OPAQUE;
+        frame_.payloadLen = static_cast<uint16_t>(value.size());
+        frame_.payload = std::move(value);
         return *this;
     }
 
@@ -146,9 +163,14 @@ namespace limp
         return *this;
     }
 
-    Frame MessageBuilder::build() const
+    Frame MessageBuilder::build() const &
     {
         return frame_;
+    }
+
+    Frame MessageBuilder::build() &&
+    {
+        return std::move(frame_);
     }
 
     MessageBuilder MessageBuilder::request(uint16_t src, uint16_t classID,
@@ -189,15 +211,14 @@ namespace limp
     }
 
     MessageBuilder MessageBuilder::error(uint16_t src, uint16_t classID,
-                                         uint16_t instanceID, uint16_t attrID, ErrorCode code)
+                                         uint16_t instanceID, uint16_t attrID)
     {
         MessageBuilder builder;
         builder.setMsgType(MsgType::ERROR)
             .setSrcNode(src)
             .setClass(classID)
             .setInstance(instanceID)
-            .setAttribute(attrID)
-            .setPayload(static_cast<uint8_t>(code));
+            .setAttribute(attrID);
         return builder;
     }
 
@@ -243,6 +264,10 @@ namespace limp
     // MessageParser Implementation
 
     MessageParser::MessageParser(const Frame &frame) : frame_(frame)
+    {
+    }
+
+    MessageParser::MessageParser(Frame &&frame) noexcept : frame_(std::move(frame))
     {
     }
 
@@ -373,18 +398,13 @@ namespace limp
         return std::monostate{};
     }
 
-    std::optional<ErrorCode> MessageParser::getErrorCode() const
+    std::optional<uint8_t> MessageParser::getErrorCode() const
     {
         if (frame_.msgType != MsgType::ERROR)
         {
             return std::nullopt;
         }
-        auto code = getUInt8();
-        if (!code)
-        {
-            return std::nullopt;
-        }
-        return static_cast<ErrorCode>(*code);
+        return getUInt8();
     }
 
 } // namespace limp

@@ -1,5 +1,5 @@
 /**
- * @file zmq_client_example.cpp
+ * @file client.cpp
  * @brief Example demonstrating ZeroMQ REQ-REP client pattern
  *
  * This example shows how to use the ZMQClient class to send requests
@@ -36,9 +36,10 @@ int main()
     std::string endpoint = "tcp://127.0.0.1:5555";
     std::cout << "Connecting to " << endpoint << "..." << std::endl;
 
-    if (!client.connect(endpoint))
+    auto connectErr = client.connect(endpoint);
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "Failed to connect to server" << std::endl;
+        std::cerr << "Failed to connect: " << toString(connectErr) << std::endl;
         return 1;
     }
 
@@ -63,46 +64,25 @@ int main()
 
         std::cout << "Sending request (" << requestFrame.totalSize() << " bytes)..." << std::endl;
 
-        // Serialize and send
-        std::vector<uint8_t> requestData;
-        if (!serializeFrame(requestFrame, requestData))
+        auto sendErr = client.send(requestFrame);
+        if (sendErr != TransportError::None)
         {
-            std::cerr << "Failed to serialize request" << std::endl;
-            continue;
-        }
-
-        if (!client.send(requestData.data(), requestData.size()))
-        {
-            std::cerr << "Failed to send request" << std::endl;
+            std::cerr << "Failed to send request: " << toString(sendErr) << std::endl;
             continue;
         }
 
         // Receive response
-        uint8_t responseBuffer[1024];
+        Frame responseFrame;
         std::cout << "Waiting for response..." << std::endl;
 
-        std::ptrdiff_t received = client.receive(responseBuffer, sizeof(responseBuffer));
-
-        if (received < 0)
+        auto recvErr = client.receive(responseFrame);
+        if (recvErr != TransportError::None)
         {
-            std::cerr << "Failed to receive response" << std::endl;
-            continue;
-        }
-        else if (received == 0)
-        {
-            std::cerr << "Receive timeout" << std::endl;
+            std::cerr << "Failed to receive response: " << toString(recvErr) << std::endl;
             continue;
         }
 
-        std::cout << "Received response (" << received << " bytes)" << std::endl;
-
-        // Deserialize and parse response
-        Frame responseFrame;
-        if (!deserializeFrame(std::vector<uint8_t>(responseBuffer, responseBuffer + received), responseFrame))
-        {
-            std::cerr << "Failed to deserialize response" << std::endl;
-            continue;
-        }
+        std::cout << "Received response (" << responseFrame.totalSize() << " bytes)" << std::endl;
 
         // Display response information
         MessageParser parser(responseFrame);

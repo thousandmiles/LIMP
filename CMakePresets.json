@@ -1,0 +1,99 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "${sourceDir}/build/${presetName}/build/Release/generators/conan_toolchain.cmake"
+    },
+    {
+      "name": "default-debug",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "${sourceDir}/build/${presetName}/build/Debug/generators/conan_toolchain.cmake"
+    },
+    {
+      "name": "release",
+      "inherits": "default",
+      "displayName": "Release Build",
+      "description": "Release build with optimizations",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LIMP_BUILD_EXAMPLES": "OFF",
+        "LIMP_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "release-all",
+      "inherits": "release",
+      "displayName": "Release with Examples",
+      "description": "Release build with examples",
+      "cacheVariables": {
+        "LIMP_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "default-debug",
+      "displayName": "Debug Build",
+      "description": "Debug build for development",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LIMP_BUILD_EXAMPLES": "ON",
+        "LIMP_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "test",
+      "inherits": "default-debug",
+      "displayName": "Debug with Tests",
+      "description": "Debug build with tests enabled",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LIMP_BUILD_EXAMPLES": "ON",
+        "LIMP_BUILD_TESTS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "configuration": "Release",
+      "jobs": 0
+    },
+    {
+      "name": "release-all",
+      "configurePreset": "release-all",
+      "configuration": "Release",
+      "jobs": 0
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "configuration": "Debug",
+      "jobs": 0
+    },
+    {
+      "name": "test",
+      "configurePreset": "test",
+      "configuration": "Debug",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test",
+      "configurePreset": "test",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

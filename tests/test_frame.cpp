@@ -100,21 +100,26 @@ void testErrorMessages()
 {
     std::cout << "Test: Error Messages... ";
 
+    // Application defines its own error codes
+    enum class AppError : uint8_t {
+        InvalidAttribute = 0x03
+    };
+
     auto error = MessageBuilder::error(
                      0x0030,
                      0x3000,
                      7,
-                     0x0001,
-                     ErrorCode::InvalidAttribute)
+                     0x0001)
+                     .setPayload(static_cast<uint8_t>(AppError::InvalidAttribute))
                      .build();
 
     assert(error.msgType == MsgType::ERROR);
 
     MessageParser parser(error);
     assert(parser.isError());
-    auto code = parser.getErrorCode();
+    auto code = parser.getUInt8();
     assert(code.has_value());
-    assert(code.value() == ErrorCode::InvalidAttribute);
+    assert(code.value() == static_cast<uint8_t>(AppError::InvalidAttribute));
 
     std::cout << "PASS\n";
 }

@@ -14,3 +14,6 @@
 #include "zmq_server.hpp"
 #include "zmq_publisher.hpp"
 #include "zmq_subscriber.hpp"
+#include "zmq_router.hpp"
+#include "zmq_dealer.hpp"
+#include "zmq_proxy.hpp"

@@ -11,11 +11,11 @@ namespace limp
         createSocket(zmq::socket_type::sub);
     }
 
-    bool ZMQSubscriber::connect(const std::string &endpoint)
+    TransportError ZMQSubscriber::connect(const std::string &endpoint)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
@@ -23,82 +23,95 @@ namespace limp
             socket_->connect(endpoint);
             endpoint_ = endpoint;
             connected_ = true;
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber connect");
-            return false;
+            return TransportError::ConnectionFailed;
         }
     }
 
-    bool ZMQSubscriber::subscribe(const std::string &topic)
+    TransportError ZMQSubscriber::subscribe(const std::string &topic)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
         {
             socket_->set(zmq::sockopt::subscribe, topic);
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber subscribe");
-            return false;
+            return TransportError::ConfigurationError;
         }
     }
 
-    bool ZMQSubscriber::unsubscribe(const std::string &topic)
+    TransportError ZMQSubscriber::unsubscribe(const std::string &topic)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
         {
             socket_->set(zmq::sockopt::unsubscribe, topic);
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "subscriber unsubscribe");
-            return false;
+            return TransportError::ConfigurationError;
         }
     }
 
-    bool ZMQSubscriber::send(const Frame &frame)
+    TransportError ZMQSubscriber::send(const Frame &frame)
     {
-        // Subscribers don't send
         (void)frame;
-        return false;
+        handleError(zmq::error_t(), "subscriber: subscribers cannot send, only receive");
+        return TransportError::InternalError;
     }
 
-    bool ZMQSubscriber::receive(Frame &frame, int timeoutMs)
+    TransportError ZMQSubscriber::sendRaw(const uint8_t *data, size_t size)
     {
-        (void)timeoutMs; // Timeout is set via socket options
-        std::vector<uint8_t> buffer(2048);
-        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
-        if (received <= 0)
-        {
-            return false;
-        }
-        buffer.resize(static_cast<size_t>(received));
-        return deserializeFrame(buffer, frame);
-    }
-
-    bool ZMQSubscriber::send(const uint8_t *data, size_t size)
-    {
-        // Subscribers don't send
         (void)data;
         (void)size;
-        return false;
+        handleError(zmq::error_t(), "subscriber: subscribers cannot send, only receive");
+        return TransportError::InternalError;
     }
 
-    std::ptrdiff_t ZMQSubscriber::receive(uint8_t *buffer, size_t maxSize)
+    TransportError ZMQSubscriber::receive(Frame &frame, int timeoutMs)
+    {
+        (void)timeoutMs; // Timeout is set via socket options
+        
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(buffer.data(), buffer.size());
+        
+        if (received < 0)
+        {
+            return TransportError::ReceiveFailed;
+        }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
+        buffer.resize(static_cast<size_t>(received));
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
+    }
+
+    std::ptrdiff_t ZMQSubscriber::receiveRaw(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())
         {
@@ -131,28 +144,23 @@ namespace limp
                 }
             }
 
-            // Calculate total size
-            size_t totalSize = 0;
-            for (const auto &msg : messages)
-            {
-                totalSize += msg.size();
-            }
+            // If there are multiple parts, the first part is the topic (skip it)
+            // The actual frame data is in the last part
+            size_t dataPartIndex = (messages.size() > 1) ? messages.size() - 1 : 0;
+            
+            const auto &dataMsg = messages[dataPartIndex];
+            size_t dataSize = dataMsg.size();
 
-            if (totalSize > maxSize)
+            if (dataSize > maxSize)
             {
                 handleError(zmq::error_t(), "received message larger than buffer");
                 return -1;
             }
 
-            // Copy all parts to buffer
-            size_t offset = 0;
-            for (const auto &msg : messages)
-            {
-                std::memcpy(buffer + offset, msg.data(), msg.size());
-                offset += msg.size();
-            }
+            // Copy only the data part to buffer (skip topic if present)
+            std::memcpy(buffer, dataMsg.data(), dataSize);
 
-            return static_cast<std::ptrdiff_t>(totalSize);
+            return static_cast<std::ptrdiff_t>(dataSize);
         }
         catch (const zmq::error_t &e)
         {

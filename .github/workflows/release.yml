@@ -32,16 +32,14 @@ jobs:
 
       - name: Install dependencies with Conan
         run: |
-          conan install . --output-folder=. --build=missing -s build_type=Release
-          echo "=== Conan output structure ==="
-          find build -name "conan_toolchain.cmake" -o -name "*.cmake" | head -20
+          conan install . --output-folder=build/release --build=missing -s build_type=Release
 
       - name: Build package
         run: |
           PKG="dist/limp-${{ github.ref_name }}-linux-x64"
           mkdir -p ${PKG}/{lib,include}
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=${PWD}/build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build build -j$(nproc)
+          cmake --preset release
+          cmake --build --preset release -j$(nproc)
           cp build/liblimp.a ${PKG}/lib/
           cp -r include/limp ${PKG}/include/
           echo "# LIMP ${{ github.ref_name }}" > ${PKG}/README.md
@@ -73,15 +71,17 @@ jobs:
       - name: Install dependencies with Conan
         shell: powershell
         run: |
-          conan install . --output-folder=. --build=missing -s build_type=Release
+          conan install . --output-folder=build/release --build=missing -s build_type=Release
+          Write-Host "=== Verifying Conan output structure ==="
+          Get-ChildItem -Path build/release -Recurse -Filter "conan_toolchain.cmake" | Select-Object FullName
 
       - name: Build package
         shell: powershell
         run: |
           $PKG = "dist/limp-${{ github.ref_name }}-windows-x64"
           New-Item -ItemType Directory -Force -Path "$PKG/lib","$PKG/include" | Out-Null
-          cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="${PWD}/build/generators/conan_toolchain.cmake" -DLIMP_BUILD_SHARED=OFF -DLIMP_BUILD_EXAMPLES=OFF -DLIMP_BUILD_TESTS=OFF
-          cmake --build build --config Release
+          cmake --preset release -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE="build/release/build/generators/conan_toolchain.cmake"
+          cmake --build build --config Release -j
           Copy-Item -Path "build/Release/limp.lib" -Destination "$PKG/lib/"
           Copy-Item -Recurse -Path "include/limp" -Destination "$PKG/include/"
           Set-Content -Path "$PKG/README.md" -Value "# LIMP ${{ github.ref_name }}"

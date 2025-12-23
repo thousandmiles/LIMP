@@ -1,9 +1,10 @@
 #include "limp/types.hpp"
+#include "limp/transport.hpp"
 
 namespace limp
 {
 
-    const char *toString(MsgType type)
+    const char *toString(MsgType type) noexcept
     {
         switch (type)
         {
@@ -26,7 +27,7 @@ namespace limp
         }
     }
 
-    const char *toString(PayloadType type)
+    const char *toString(PayloadType type) noexcept
     {
         switch (type)
         {
@@ -53,56 +54,40 @@ namespace limp
         }
     }
 
-    const char *toString(ErrorCode code)
+    const char *toString(TransportError error) noexcept
     {
-        switch (code)
+        switch (error)
         {
-        case ErrorCode::InvalidClass:
-            return "InvalidClass";
-        case ErrorCode::InvalidInstance:
-            return "InvalidInstance";
-        case ErrorCode::InvalidAttribute:
-            return "InvalidAttribute";
-        case ErrorCode::PermissionDenied:
-            return "PermissionDenied";
-        case ErrorCode::BadPayload:
-            return "BadPayload";
-        case ErrorCode::InternalError:
+        case TransportError::None:
+            return "None";
+        case TransportError::ConnectionFailed:
+            return "ConnectionFailed";
+        case TransportError::BindFailed:
+            return "BindFailed";
+        case TransportError::SendFailed:
+            return "SendFailed";
+        case TransportError::ReceiveFailed:
+            return "ReceiveFailed";
+        case TransportError::Timeout:
+            return "Timeout";
+        case TransportError::InvalidEndpoint:
+            return "InvalidEndpoint";
+        case TransportError::SocketClosed:
+            return "SocketClosed";
+        case TransportError::NotConnected:
+            return "NotConnected";
+        case TransportError::SerializationFailed:
+            return "SerializationFailed";
+        case TransportError::DeserializationFailed:
+            return "DeserializationFailed";
+        case TransportError::InvalidFrame:
+            return "InvalidFrame";
+        case TransportError::AlreadyConnected:
+            return "AlreadyConnected";
+        case TransportError::ConfigurationError:
+            return "ConfigurationError";
+        case TransportError::InternalError:
             return "InternalError";
-        case ErrorCode::UnsupportedVersion:
-            return "UnsupportedVersion";
-        case ErrorCode::InvalidFlags:
-            return "InvalidFlags";
-        default:
-            return "UNKNOWN";
-        }
-    }
-
-    const char *toString(Quality quality)
-    {
-        switch (quality)
-        {
-        case Quality::Bad:
-            return "Bad";
-        case Quality::Good:
-            return "Good";
-        case Quality::Uncertain:
-            return "Uncertain";
-        default:
-            return "UNKNOWN";
-        }
-    }
-
-    const char *toString(Severity severity)
-    {
-        switch (severity)
-        {
-        case Severity::Info:
-            return "Info";
-        case Severity::Warning:
-            return "Warning";
-        case Severity::Critical:
-            return "Critical";
         default:
             return "UNKNOWN";
         }

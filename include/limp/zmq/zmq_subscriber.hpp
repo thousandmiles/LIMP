@@ -38,9 +38,9 @@ namespace limp
          * Establishes connection to the specified publisher.
          *
          * @param endpoint Publisher address (e.g., "tcp://127.0.0.1:5556")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool connect(const std::string &endpoint);
+        TransportError connect(const std::string &endpoint);
 
         /**
          * @brief Subscribe to a topic
@@ -50,9 +50,9 @@ namespace limp
          * messages.
          *
          * @param topic Topic to subscribe to (empty for all messages)
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool subscribe(const std::string &topic = "");
+        TransportError subscribe(const std::string &topic = "");
 
         /**
          * @brief Unsubscribe from a topic
@@ -60,46 +60,35 @@ namespace limp
          * Removes a topic subscription filter.
          *
          * @param topic Topic to unsubscribe from
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool unsubscribe(const std::string &topic);
-
-        /**
-         * @brief Not supported for subscriber (receive uses receiveWithTopic)
-         * @return false
-         */
-        bool send(const Frame &frame) override;
+        TransportError unsubscribe(const std::string &topic);
 
         /**
          * @brief Receive a LIMP frame (strips topic prefix automatically)
          *
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Not supported for subscriber
+         * @brief Receive raw data (last part of multipart message)
          *
-         * Subscribers do not send data.
+         * If message has multiple parts (topic + data), returns only the data part.
          *
-         * @return Always false
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
          */
-        bool send(const uint8_t *data, size_t size);
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
 
-        /**
-         * @brief Receive a published message
-         *
-         * Blocks until a message matching subscribed topics is received
-         * or timeout occurs. If topic filtering is used, the topic prefix
-         * is included in the received data.
-         *
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received, 0 on timeout, -1 on error
-         */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+    private:
+        // Base class overrides - not supported for subscriber
+        TransportError send(const Frame &frame) override;
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
     };
 
 } // namespace limp

@@ -43,9 +43,9 @@ namespace limp
          * incoming connections.
          *
          * @param endpoint Bind address (e.g., "tcp://0.0.0.0:5555")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool bind(const std::string &endpoint);
+        TransportError bind(const std::string &endpoint);
 
         /**
          * @brief Send a LIMP frame
@@ -53,21 +53,9 @@ namespace limp
          * Serializes and sends a LIMP frame via REP socket.
          *
          * @param frame Frame to send
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const Frame &frame) override;
-
-        /**
-         * @brief Send response to client
-         *
-         * Sends a response to the most recent request. Must be called
-         * after each receive() before receiving again.
-         *
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
-         */
-        bool send(const uint8_t *data, size_t size);
+        TransportError send(const Frame &frame) override;
 
         /**
          * @brief Receive a LIMP frame
@@ -76,21 +64,28 @@ namespace limp
          *
          * @param frame Output frame
          * @param timeoutMs Timeout in milliseconds
-         * @return true on success, false on timeout or error
+         * @return TransportError::None on success, TransportError::Timeout on timeout,
+         *         other error code on failure
          */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
 
         /**
-         * @brief Receive request from client
+         * @brief Send raw data
          *
-         * Blocks until a request is received or timeout occurs.
-         * Must be followed by a send() before receiving again.
-         *
-         * @param buffer Buffer to store received data
-         * @param maxSize Maximum buffer size
-         * @return Number of bytes received, 0 on timeout, -1 on error
+         * @param data Pointer to data buffer
+         * @param size Size of data in bytes
+         * @return TransportError::None on success, specific error code on failure
          */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
+
+        /**
+         * @brief Receive raw data
+         *
+         * @param buffer Pointer to buffer to store received data
+         * @param maxSize Maximum size of the buffer
+         * @return Number of bytes received, or -1 on error
+         */
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
     };
 
 } // namespace limp

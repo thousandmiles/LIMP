@@ -39,58 +39,38 @@ namespace limp
          * Binds the publisher socket to the specified endpoint.
          *
          * @param endpoint Bind address (e.g., "tcp://0.0.0.0:5556")
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool bind(const std::string &endpoint);
+        TransportError bind(const std::string &endpoint);
 
         /**
-         * @brief Publish a message without topic
+         * @brief Publish a LIMP frame with topic
          *
-         * Sends a message to all subscribers.
+         * Publishes a Frame with a topic prefix. Subscribers can filter
+         * messages by subscribing to specific topics. Use empty string "" for no topic filtering.
          *
+         * @param topic Topic string for filtering (use "" for broadcast to all)
+         * @param frame Frame to publish
+         * @return TransportError::None on success, specific error code on failure
+         */
+        TransportError publish(const std::string &topic, const Frame &frame);
+
+        /**
+         * @brief Publish raw data with topic
+         *
+         * @param topic Topic string for filtering (use "" for broadcast to all)
          * @param data Pointer to data buffer
          * @param size Size of data in bytes
-         * @return true on success, false on failure
+         * @return TransportError::None on success, specific error code on failure
          */
-        bool send(const uint8_t *data, size_t size);
+        TransportError publishRaw(const std::string &topic, const uint8_t *data, size_t size);
 
-        /**
-         * @brief Publish a message with topic
-         *
-         * Sends a message with a topic prefix. Subscribers can filter
-         * messages by subscribing to specific topics.
-         *
-         * @param topic Topic string for filtering
-         * @param data Pointer to data buffer
-         * @param size Size of data in bytes
-         * @return true on success, false on failure
-         */
-        bool publish(const std::string &topic, const uint8_t *data, size_t size);
-
-        /**
-         * @brief Send a LIMP frame
-         *
-         * Serializes and sends a LIMP frame to all subscribers.
-         *
-         * @param frame Frame to send
-         * @return true on success, false on failure
-         */
-        bool send(const Frame &frame) override;
-
-        /**
-         * @brief Not supported for publisher
-         * @return false
-         */
-        bool receive(Frame &frame, int timeoutMs = -1) override;
-
-        /**
-         * @brief Not supported for publisher
-         *
-         * Publishers do not receive data.
-         *
-         * @return Always -1
-         */
-        std::ptrdiff_t receive(uint8_t *buffer, size_t maxSize);
+    private:
+        // Base class overrides - use publish() instead
+        TransportError send(const Frame &frame) override;
+        TransportError sendRaw(const uint8_t *data, size_t size) override;
+        TransportError receive(Frame &frame, int timeoutMs = -1) override;
+        std::ptrdiff_t receiveRaw(uint8_t *buffer, size_t maxSize) override;
     };
 
 } // namespace limp

@@ -1,5 +1,5 @@
 /**
- * @file zmq_pubsub_example.cpp
+ * @file publisher_subscriber.cpp
  * @brief Example demonstrating ZeroMQ PUB-SUB pattern
  *
  * This example demonstrates both publisher and subscriber in a single
@@ -35,16 +35,19 @@ void publisherThread()
     ZMQPublisher publisher(config);
 
     // Bind to endpoint
-    if (!publisher.bind("tcp://*:5556"))
+    auto bindErr = publisher.bind("tcp://*:5556");
+    if (bindErr != TransportError::None)
     {
-        std::cerr << "[Publisher] Failed to bind" << std::endl;
+        std::cerr << "[Publisher] Failed to bind: " << toString(bindErr) << std::endl;
         return;
     }
 
     std::cout << "[Publisher] Bound to tcp://*:5556" << std::endl;
 
     // Wait for subscribers to connect (slow joiner problem workaround)
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    std::cout << "[Publisher] Starting to publish events..." << std::endl;
 
     // Publish events
     int eventCount = 0;
@@ -66,12 +69,8 @@ void publisherThread()
             tempBuilder.setPayload(23.5f + (eventCount % 10));
             Frame tempFrame = tempBuilder.build();
 
-            std::vector<uint8_t> tempData;
-            if (serializeFrame(tempFrame, tempData))
-            {
-                publisher.publish("temperature", tempData.data(), tempData.size());
-                std::cout << "[Publisher] Published temperature event #" << eventCount << std::endl;
-            }
+            publisher.publish("temperature", tempFrame);
+            std::cout << "[Publisher] Published temperature event #" << eventCount << std::endl;
         }
         else
         {
@@ -85,12 +84,8 @@ void publisherThread()
             pressureBuilder.setPayload(101.3f + (eventCount % 5));
             Frame pressureFrame = pressureBuilder.build();
 
-            std::vector<uint8_t> pressureData;
-            if (serializeFrame(pressureFrame, pressureData))
-            {
-                publisher.publish("pressure", pressureData.data(), pressureData.size());
-                std::cout << "[Publisher] Published pressure event #" << eventCount << std::endl;
-            }
+            publisher.publish("pressure", pressureFrame);
+            std::cout << "[Publisher] Published pressure event #" << eventCount << std::endl;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -109,7 +104,7 @@ void subscriberThread(const std::string &topic)
     std::cout << "[Subscriber " << topic << "] Starting..." << std::endl;
 
     // Wait for publisher to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     // Configure and create subscriber
     ZMQConfig config;
@@ -118,37 +113,36 @@ void subscriberThread(const std::string &topic)
     ZMQSubscriber subscriber(config);
 
     // Connect to publisher
-    if (!subscriber.connect("tcp://127.0.0.1:5556"))
+    auto connectErr = subscriber.connect("tcp://127.0.0.1:5556");
+    if (connectErr != TransportError::None)
     {
-        std::cerr << "[Subscriber " << topic << "] Failed to connect" << std::endl;
+        std::cerr << "[Subscriber " << topic << "] Failed to connect: " << toString(connectErr) << std::endl;
         return;
     }
 
     std::cout << "[Subscriber " << topic << "] Connected to tcp://127.0.0.1:5556" << std::endl;
 
     // Subscribe to topic
-    if (!subscriber.subscribe(topic))
+    auto subErr = subscriber.subscribe(topic);
+    if (subErr != TransportError::None)
     {
-        std::cerr << "[Subscriber " << topic << "] Failed to subscribe" << std::endl;
+        std::cerr << "[Subscriber " << topic << "] Failed to subscribe: " << toString(subErr) << std::endl;
         return;
     }
 
     std::cout << "[Subscriber " << topic << "] Subscribed to topic: " << topic << std::endl;
+
+    // Give ZeroMQ time to establish subscription
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Receive events
     int eventCount = 0;
 
     while (running && eventCount < 10)
     {
-        uint8_t buffer[1024];
-        std::ptrdiff_t received = subscriber.receive(buffer, sizeof(buffer));
-
-        if (received < 0)
-        {
-            std::cerr << "[Subscriber " << topic << "] Receive error" << std::endl;
-            continue;
-        }
-        else if (received == 0)
+        Frame eventFrame;
+        auto recvErr = subscriber.receive(eventFrame);
+        if (recvErr != TransportError::None)
         {
             // Timeout - continue
             continue;
@@ -156,27 +150,15 @@ void subscriberThread(const std::string &topic)
 
         eventCount++;
 
-        // The received data includes the topic prefix
-        // Find where the LIMP frame starts (after the topic)
-        size_t topicLen = topic.length();
-        if (static_cast<size_t>(received) > topicLen)
+        // Parse the event
+        MessageParser parser(eventFrame);
+        auto value = parser.getValue();
+
+        if (std::holds_alternative<float>(value))
         {
-            // Deserialize LIMP message (skip topic prefix)
-            std::vector<uint8_t> frameData(buffer + topicLen, buffer + received);
-            Frame eventFrame;
-
-            if (deserializeFrame(frameData, eventFrame))
-            {
-                MessageParser parser(eventFrame);
-                auto value = parser.getValue();
-
-                if (std::holds_alternative<float>(value))
-                {
-                    float floatValue = std::get<float>(value);
-                    std::cout << "[Subscriber " << topic << "] Received event #" << eventCount
-                              << ", value: " << floatValue << std::endl;
-                }
-            }
+            float floatValue = std::get<float>(value);
+            std::cout << "[Subscriber " << topic << "] Received event #" << eventCount
+                      << ", value: " << floatValue << std::endl;
         }
     }
 

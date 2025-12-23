@@ -62,6 +62,9 @@ if(LIMP_BUILD_ZMQ)
         src/zmq/zmq_server.cpp
         src/zmq/zmq_publisher.cpp
         src/zmq/zmq_subscriber.cpp
+        src/zmq/zmq_router.cpp
+        src/zmq/zmq_dealer.cpp
+        src/zmq/zmq_proxy.cpp
     )
     list(APPEND LIMP_HEADERS 
         include/limp/zmq/zmq_config.hpp
@@ -70,6 +73,9 @@ if(LIMP_BUILD_ZMQ)
         include/limp/zmq/zmq_server.hpp
         include/limp/zmq/zmq_publisher.hpp
         include/limp/zmq/zmq_subscriber.hpp
+        include/limp/zmq/zmq_router.hpp
+        include/limp/zmq/zmq_dealer.hpp
+        include/limp/zmq/zmq_proxy.hpp
         include/limp/zmq/zmq.hpp
     )
     

@@ -10,11 +10,11 @@ namespace limp
         createSocket(zmq::socket_type::rep);
     }
 
-    bool ZMQServer::bind(const std::string &endpoint)
+    TransportError ZMQServer::bind(const std::string &endpoint)
     {
         if (!socket_)
         {
-            return false;
+            return TransportError::SocketClosed;
         }
 
         try
@@ -22,36 +22,36 @@ namespace limp
             socket_->bind(endpoint);
             endpoint_ = endpoint;
             connected_ = true;
-            return true;
+            return TransportError::None;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "server bind");
-            return false;
+            return TransportError::BindFailed;
         }
     }
 
-    bool ZMQServer::send(const uint8_t *data, size_t size)
+    TransportError ZMQServer::sendRaw(const uint8_t *data, size_t size)
     {
         if (!isConnected())
         {
-            return false;
+            return TransportError::NotConnected;
         }
 
         try
         {
             zmq::message_t message(data, size);
             auto result = socket_->send(message, zmq::send_flags::none);
-            return result.has_value();
+            return result.has_value() ? TransportError::None : TransportError::SendFailed;
         }
         catch (const zmq::error_t &e)
         {
             handleError(e, "server send");
-            return false;
+            return TransportError::SendFailed;
         }
     }
 
-    std::ptrdiff_t ZMQServer::receive(uint8_t *buffer, size_t maxSize)
+    std::ptrdiff_t ZMQServer::receiveRaw(uint8_t *buffer, size_t maxSize)
     {
         if (!isConnected())
         {
@@ -85,27 +85,41 @@ namespace limp
         }
     }
 
-    bool ZMQServer::send(const Frame &frame)
+    TransportError ZMQServer::send(const Frame &frame)
     {
         std::vector<uint8_t> buffer;
         if (!serializeFrame(frame, buffer))
         {
-            return false;
+            return TransportError::SerializationFailed;
         }
-        return send(buffer.data(), buffer.size());
+        
+        return sendRaw(buffer.data(), buffer.size());
     }
 
-    bool ZMQServer::receive(Frame &frame, int timeoutMs)
+    TransportError ZMQServer::receive(Frame &frame, int timeoutMs)
     {
         (void)timeoutMs; // Timeout is set via socket options
-        std::vector<uint8_t> buffer(2048);
-        std::ptrdiff_t received = receive(buffer.data(), buffer.size());
-        if (received <= 0)
+        
+        std::vector<uint8_t> buffer(4096); // Initial buffer size
+        std::ptrdiff_t received = receiveRaw(buffer.data(), buffer.size());
+        
+        if (received < 0)
         {
-            return false;
+            return TransportError::ReceiveFailed;
         }
+        if (received == 0)
+        {
+            return TransportError::Timeout;
+        }
+        
         buffer.resize(static_cast<size_t>(received));
-        return deserializeFrame(buffer, frame);
+        
+        if (!deserializeFrame(buffer, frame))
+        {
+            return TransportError::DeserializationFailed;
+        }
+        
+        return TransportError::None;
     }
 
 } // namespace limp
